@@ -3,6 +3,7 @@
 > **Domain:** thebossfinance.com
 > **Type:** Internal admin tool (no public pages)
 > **Entry point:** Login screen
+> **Live Deployment:** https://boss-finance-80gk5f5or-codeorbit-techs-projects.vercel.app
 
 ---
 
