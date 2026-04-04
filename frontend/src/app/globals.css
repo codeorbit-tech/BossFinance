@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+/* ─── Emerald Ledger Design System ─── */
+@theme inline {
+  /* Core palette */
+  --color-primary: #00280f;
+  --color-primary-container: #00401d;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #57b171;
+  --color-primary-fixed: #9af7af;
+  --color-primary-fixed-dim: #7eda95;
+
+  --color-secondary: #426651;
+  --color-secondary-container: #c4ecd2;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #486c57;
+  --color-secondary-fixed: #c4ecd2;
+  --color-secondary-fixed-dim: #a9d0b6;
+
+  --color-tertiary: #1f1f33;
+  --color-tertiary-container: #34344a;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #9e9db7;
+  --color-tertiary-fixed: #e2e0fc;
+  --color-tertiary-fixed-dim: #c6c4df;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --color-surface: #f8f9fa;
+  --color-surface-dim: #d9dadb;
+  --color-surface-bright: #f8f9fa;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f5;
+  --color-surface-container: #edeeef;
+  --color-surface-container-high: #e7e8e9;
+  --color-surface-container-highest: #e1e3e4;
+
+  --color-on-surface: #191c1d;
+  --color-on-surface-variant: #414843;
+  --color-outline: #727973;
+  --color-outline-variant: #c1c8c1;
+  --color-inverse-surface: #2e3132;
+  --color-inverse-on-surface: #f0f1f2;
+  --color-inverse-primary: #7eda95;
+  --color-surface-tint: #006d36;
+
+  --color-accent: #57b171;
+  --color-background: #f8f9fa;
+  --color-on-background: #191c1d;
+
+  /* Typography */
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+}
+
+/* ─── Base styles ─── */
+body {
+  font-family: var(--font-body);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+}
+
+h1, h2, h3, .font-headline {
+  font-family: var(--font-headline);
+}
+
+/* ─── Material Symbols ─── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ─── Custom scrollbar ─── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ─── Toggle switch ─── */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-track {
+  width: 2.75rem;
+  height: 1.5rem;
+  background: var(--color-surface-container-highest);
+  border-radius: 9999px;
+  position: relative;
+  transition: background 0.2s;
+}
+.toggle-switch input:checked + .toggle-track {
+  background: var(--color-primary);
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: 9999px;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-track::after {
+  transform: translateX(1.25rem);
+}
+
+/* ─── Skeleton loader animation ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface-container-high) 25%, var(--color-surface-container) 50%, var(--color-surface-container-high) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.25rem;
+}
