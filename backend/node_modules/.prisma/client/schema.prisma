@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("EMPLOYEE")
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loansCreated     Loan[]         @relation("LoanCreator")
+  customersCreated Customer[]     @relation("CustomerCreator")
+  notificationsSent Notification[] @relation("NotificationSender")
+  auditLogs        AuditLog[]     @relation("AuditUser")
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  customerId  String   @unique
+  name        String
+  phone       String?
+  email       String?
+  address     String?
+  aadhaar     String?
+  pan         String?
+  dateOfBirth DateTime?
+  occupation  String?
+  
+  // Bank Details
+  bankName    String?
+  bankAccount String?
+  bankIfsc    String?
+
+  status      String   @default("PENDING") // PENDING, ACTIVE, CLOSED, OVERDUE, NPA
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?          @relation("CustomerCreator", fields: [createdById], references: [id])
+
+  loans          Loan[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+}
+
+model Loan {
+  id                String    @id @default(cuid())
+  customerId        String
+  customer          Customer  @relation(fields: [customerId], references: [id])
+  loanType          String    // HOME, VEHICLE, PERSONAL, BUSINESS, DAILY
+  amount            Float
+  tenure            Int       // in months or days
+  interestRate      Float     @default(0)
+  emi               Float     @default(0)
+  frequency         String    @default("MONTHLY") // DAILY, WEEKLY, MONTHLY
+  purpose           String?
+  
+  guarantorName     String?
+  guarantorPhone    String?
+  collateralDetails String?   // added to fulfill checklist
+
+  status            String    @default("PENDING") // PENDING, ACTIVE, CLOSED, REJECTED, OVERDUE, NPA
+  approvedAt        DateTime? // sanction date
+  disbursedAt       DateTime? // added to fulfill checklist
+  
+  pdfUrl            String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  createdById String?
+  createdBy   User?      @relation("LoanCreator", fields: [createdById], references: [id])
+
+  installments Installment[]
+}
+
+model Installment {
+  id                  String    @id @default(cuid())
+  loanId              String
+  loan                Loan      @relation(fields: [loanId], references: [id])
+  
+  installmentNumber   Int
+  dueDate             DateTime
+  expectedAmount      Float
+  
+  amountPaid          Float     @default(0)
+  penalInterest       Float     @default(0) // tracked if late
+  totalRemaining      Float     // expectedAmount + penalInterest - amountPaid
+  
+  balanceAfterPayment Float     // running outstanding balance after this installment
+  
+  status              String    @default("UPCOMING") // UPCOMING, PAID, OVERDUE, PARTIAL
+  paidAt              DateTime?
+  method              String?   // CASH, UPI, BANK_TRANSFER, AUTOPAY etc.
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  channel    String   @default("SMS")
+  template   String   @default("CUSTOM")
+  message    String
+  status     String   @default("PENDING")
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  sentById String?
+  sentBy   User?   @relation("NotificationSender", fields: [sentById], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  field      String
+  oldValue   String
+  newValue   String
+  createdAt  DateTime @default(now())
+
+  changedById String?
+  changedBy   User?   @relation("AuditUser", fields: [changedById], references: [id])
+}
