@@ -54,8 +54,8 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-accent rounded-xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-accent/30">
-            <span className="material-symbols-outlined text-white text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>house</span>
+          <div className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-accent/30 overflow-hidden border-4 border-white">
+            <img src="/BossLogo.png" alt="Boss Finance Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-extrabold text-white font-[var(--font-headline)] tracking-tight">Boss Finance</h1>
           <p className="text-accent text-xs uppercase tracking-[0.3em] mt-1">& Consulting</p>

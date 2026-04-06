@@ -43,14 +43,14 @@ async function main() {
     }
   });
 
-  await prisma.installment.createMany({
-    data: [
-      { loanId: rajeshLoan.id, installmentNumber: 1, dueDate: new Date('2026-01-01'), expectedAmount: 5167, amountPaid: 5167, penalInterest: 0, totalRemaining: 0, balanceAfterPayment: 44833, status: 'PAID', paidAt: new Date('2026-01-01'), method: 'UPI' },
-      { loanId: rajeshLoan.id, installmentNumber: 2, dueDate: new Date('2026-02-01'), expectedAmount: 5167, amountPaid: 5167, penalInterest: 0, totalRemaining: 0, balanceAfterPayment: 39666, status: 'PAID', paidAt: new Date('2026-02-01'), method: 'CASH' },
-      { loanId: rajeshLoan.id, installmentNumber: 3, dueDate: new Date('2026-03-01'), expectedAmount: 5167, amountPaid: 0, penalInterest: 200, totalRemaining: 5367, balanceAfterPayment: 39666, status: 'OVERDUE' }, // Client explicit test case
-      { loanId: rajeshLoan.id, installmentNumber: 4, dueDate: new Date('2026-04-01'), expectedAmount: 5167, amountPaid: 0, penalInterest: 0, totalRemaining: 5167, balanceAfterPayment: 39666, status: 'UPCOMING' },
-    ]
-  });
+  for (const inst of [
+    { loanId: rajeshLoan.id, installmentNumber: 1, dueDate: new Date('2026-01-01'), expectedAmount: 5167, amountPaid: 5167, penalInterest: 0, totalRemaining: 0, balanceAfterPayment: 44833, status: 'PAID', paidAt: new Date('2026-01-01'), method: 'UPI' },
+    { loanId: rajeshLoan.id, installmentNumber: 2, dueDate: new Date('2026-02-01'), expectedAmount: 5167, amountPaid: 5167, penalInterest: 0, totalRemaining: 0, balanceAfterPayment: 39666, status: 'PAID', paidAt: new Date('2026-02-01'), method: 'CASH' },
+    { loanId: rajeshLoan.id, installmentNumber: 3, dueDate: new Date('2026-03-01'), expectedAmount: 5167, amountPaid: 0, penalInterest: 200, totalRemaining: 5367, balanceAfterPayment: 39666, status: 'OVERDUE' },
+    { loanId: rajeshLoan.id, installmentNumber: 4, dueDate: new Date('2026-04-01'), expectedAmount: 5167, amountPaid: 0, penalInterest: 0, totalRemaining: 5167, balanceAfterPayment: 39666, status: 'UPCOMING' },
+  ]) {
+    await prisma.installment.create({ data: inst });
+  }
 
   // 2. Foreclosure Customer (Paid early)
   const sunita = await prisma.customer.create({
@@ -74,13 +74,13 @@ async function main() {
   const arjunLoan = await prisma.loan.create({
     data: { customerId: arjun.id, loanType: 'VEHICLE', amount: 100000, tenure: 12, emi: 9500, status: 'OVERDUE', createdById: employee.id }
   });
-  await prisma.installment.createMany({
-    data: [
-      { loanId: arjunLoan.id, installmentNumber: 1, dueDate: new Date('2026-01-05'), expectedAmount: 9500, amountPaid: 9500, penalInterest: 0, totalRemaining: 0, balanceAfterPayment: 90500, status: 'PAID', paidAt: new Date('2026-01-05') },
-      { loanId: arjunLoan.id, installmentNumber: 2, dueDate: new Date('2026-02-05'), expectedAmount: 9500, amountPaid: 0, penalInterest: 500, totalRemaining: 10000, balanceAfterPayment: 90500, status: 'OVERDUE' },
-      { loanId: arjunLoan.id, installmentNumber: 3, dueDate: new Date('2026-03-05'), expectedAmount: 9500, amountPaid: 0, penalInterest: 150, totalRemaining: 9650, balanceAfterPayment: 90500, status: 'OVERDUE' },
-    ]
-  });
+  for (const inst of [
+    { loanId: arjunLoan.id, installmentNumber: 1, dueDate: new Date('2026-01-05'), expectedAmount: 9500, amountPaid: 9500, penalInterest: 0, totalRemaining: 0, balanceAfterPayment: 90500, status: 'PAID', paidAt: new Date('2026-01-05') },
+    { loanId: arjunLoan.id, installmentNumber: 2, dueDate: new Date('2026-02-05'), expectedAmount: 9500, amountPaid: 0, penalInterest: 500, totalRemaining: 10000, balanceAfterPayment: 90500, status: 'OVERDUE' },
+    { loanId: arjunLoan.id, installmentNumber: 3, dueDate: new Date('2026-03-05'), expectedAmount: 9500, amountPaid: 0, penalInterest: 150, totalRemaining: 9650, balanceAfterPayment: 90500, status: 'OVERDUE' },
+  ]) {
+    await prisma.installment.create({ data: inst });
+  }
 
   // 4. Daily Loan Customer (25 entries)
   const karan = await prisma.customer.create({
@@ -89,18 +89,18 @@ async function main() {
   const karanLoan = await prisma.loan.create({
     data: { customerId: karan.id, loanType: 'DAILY', amount: 12500, tenure: 25, emi: 500, frequency: 'DAILY', status: 'ACTIVE', createdById: employee.id }
   });
-  const dailyInstallments = [];
   let dailyBal = 12500;
   for (let i = 1; i <= 25; i++) {
     const isPaid = i <= 20; // 20 days paid, 5 upcoming
     dailyBal -= isPaid ? 500 : 0;
-    dailyInstallments.push({
-      loanId: karanLoan.id, installmentNumber: i, dueDate: new Date(2026, 2, i), expectedAmount: 500,
-      amountPaid: isPaid ? 500 : 0, penalInterest: 0, totalRemaining: isPaid ? 0 : 500, balanceAfterPayment: dailyBal,
-      status: isPaid ? 'PAID' : 'UPCOMING', paidAt: isPaid ? new Date(2026, 2, i) : null
+    await prisma.installment.create({
+      data: {
+        loanId: karanLoan.id, installmentNumber: i, dueDate: new Date(2026, 2, i), expectedAmount: 500,
+        amountPaid: isPaid ? 500 : 0, penalInterest: 0, totalRemaining: isPaid ? 0 : 500, balanceAfterPayment: dailyBal,
+        status: isPaid ? 'PAID' : 'UPCOMING', paidAt: isPaid ? new Date(2026, 2, i) : null
+      }
     });
   }
-  await prisma.installment.createMany({ data: dailyInstallments });
 
   // 5. Partial Payment Customer
   const meera = await prisma.customer.create({
@@ -120,14 +120,14 @@ async function main() {
   const rohanLoan = await prisma.loan.create({
     data: { customerId: rohan.id, loanType: 'PERSONAL', amount: 200000, tenure: 12, emi: 18000, status: 'NPA', createdById: employee.id }
   });
-  await prisma.installment.createMany({
-    data: [
-      { loanId: rohanLoan.id, installmentNumber: 1, dueDate: new Date('2025-10-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 2500, totalRemaining: 20500, balanceAfterPayment: 200000, status: 'OVERDUE' },
-      { loanId: rohanLoan.id, installmentNumber: 2, dueDate: new Date('2025-11-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 2000, totalRemaining: 20000, balanceAfterPayment: 200000, status: 'OVERDUE' },
-      { loanId: rohanLoan.id, installmentNumber: 3, dueDate: new Date('2025-12-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 1500, totalRemaining: 19500, balanceAfterPayment: 200000, status: 'OVERDUE' },
-      { loanId: rohanLoan.id, installmentNumber: 4, dueDate: new Date('2026-01-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 1000, totalRemaining: 19000, balanceAfterPayment: 200000, status: 'OVERDUE' },
-    ]
-  });
+  for (const inst of [
+    { loanId: rohanLoan.id, installmentNumber: 1, dueDate: new Date('2025-10-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 2500, totalRemaining: 20500, balanceAfterPayment: 200000, status: 'OVERDUE' },
+    { loanId: rohanLoan.id, installmentNumber: 2, dueDate: new Date('2025-11-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 2000, totalRemaining: 20000, balanceAfterPayment: 200000, status: 'OVERDUE' },
+    { loanId: rohanLoan.id, installmentNumber: 3, dueDate: new Date('2025-12-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 1500, totalRemaining: 19500, balanceAfterPayment: 200000, status: 'OVERDUE' },
+    { loanId: rohanLoan.id, installmentNumber: 4, dueDate: new Date('2026-01-01'), expectedAmount: 18000, amountPaid: 0, penalInterest: 1000, totalRemaining: 19000, balanceAfterPayment: 200000, status: 'OVERDUE' },
+  ]) {
+    await prisma.installment.create({ data: inst });
+  }
   
   // Track this exact change in the Audit Log
   await prisma.auditLog.create({
@@ -136,6 +136,9 @@ async function main() {
 
   console.log('✅ Edge Case seeding complete.');
   console.log('Tested scenarios: Foreclosure, Missed 2 Payments, Daily Loan 25 entries, Partial Payment, NPA Tracking.');
+  console.log('\n📋 Login credentials:');
+  console.log('   Admin  → username: admin    | password: admin123');
+  console.log('   Staff  → username: ramesh   | password: employee123');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

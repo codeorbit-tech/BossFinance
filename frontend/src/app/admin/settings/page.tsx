@@ -104,40 +104,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Data Pipeline */}
-        <section className="bg-surface-container-lowest p-8 rounded-xl border border-transparent hover:border-accent/20 transition-all">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-              <span className="material-symbols-outlined text-accent">cloud_sync</span>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-tertiary">Data Pipeline</h3>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                <span className="text-xs font-bold text-accent uppercase tracking-tighter">Status: Connected</span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-surface-container-low p-6 rounded-lg mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-on-surface-variant">Connected Spreadsheet</span>
-              <span className="text-sm font-bold text-tertiary underline decoration-accent/40">Boss_Master_Ledger_2024</span>
-            </div>
-            <div className="flex justify-between items-center text-xs text-on-surface-variant">
-              <span>Last synchronized</span>
-              <span className="italic font-mono">14 minutes ago</span>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <button className="flex-1 py-3 bg-accent text-white font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#489d62] transition-colors">
-              <span className="material-symbols-outlined text-lg">sync</span>
-              Manual Sync
-            </button>
-            <button className="px-4 py-3 bg-surface-container-high text-tertiary font-bold rounded-lg hover:bg-surface-container-highest transition-colors">
-              <span className="material-symbols-outlined text-lg">settings_input_component</span>
-            </button>
-          </div>
-        </section>
+
 
         {/* Broadcasting Rules */}
         <section className="bg-surface-container-lowest p-8 rounded-xl">

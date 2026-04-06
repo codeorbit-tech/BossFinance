@@ -6,37 +6,43 @@ import { CardSkeleton } from '@/components/Skeletons';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    // Portfolio
-    totalCustomers: 0,
-    totalSanctioned: '₹0',
-    totalOutstanding: '₹0',
-    // Collections
-    todayExpected: '₹0',
-    todayActual: '₹0',
-    weekExpected: '₹0',
-    weekActual: '₹0',
-    monthExpected: '₹0',
-    monthActual: '₹0',
-    // Risk
-    overdueCount: 0,
-    npaCount: 0,
-  });
+  const [activeTab, setActiveTab] = useState('daily');
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
+    // Simulating API fetch with period-specific data
     setTimeout(() => {
       setStats({
-        totalCustomers: 6,
-        totalSanctioned: '₹12,62,500',
-        totalOutstanding: '₹9,21,999',
-        todayExpected: '₹500',
-        todayActual: '₹500',
-        weekExpected: '₹14,667',
-        weekActual: '₹8,500',
-        monthExpected: '₹42,500',
-        monthActual: '₹32,500',
-        overdueCount: 2,
-        npaCount: 1,
+        daily: {
+          expected: '₹5,500',
+          actual: '₹4,800',
+          pending: '₹700',
+          customers: 2,
+          sanctioned: '₹1,50,000',
+          outstanding: '₹1,42,000',
+          overdue: 1,
+          npa: 0,
+        },
+        weekly: {
+          expected: '₹38,500',
+          actual: '₹32,200',
+          pending: '₹6,300',
+          customers: 12,
+          sanctioned: '₹8,25,000',
+          outstanding: '₹7,15,500',
+          overdue: 4,
+          npa: 1,
+        },
+        monthly: {
+          expected: '₹1,65,000',
+          actual: '₹1,42,500',
+          pending: '₹22,500',
+          customers: 48,
+          sanctioned: '₹32,62,500',
+          outstanding: '₹24,21,999',
+          overdue: 14,
+          npa: 3,
+        }
       });
       setLoading(false);
     }, 800);
@@ -50,67 +56,114 @@ export default function AdminDashboard() {
     { id: 5, action: 'Loan application submitted', customer: 'Meera Joshi (BF-2024-022)', time: '3 days ago', icon: 'description', color: 'text-tertiary' },
   ];
 
+  const tabs = [
+    { id: 'daily', label: 'Daily', icon: 'today' },
+    { id: 'weekly', label: 'Weekly', icon: 'date_range' },
+    { id: 'monthly', label: 'Monthly', icon: 'calendar_month' },
+  ];
+
+  const currentStats = stats ? stats[activeTab as keyof typeof stats] : null;
+
   return (
-    <div>
+    <div className="max-w-[1400px] mx-auto pb-12">
       {/* Page header */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-extrabold font-[var(--font-headline)] tracking-tight text-tertiary mb-1">Dashboard</h2>
-        <p className="text-on-surface-variant text-sm">Welcome back. Here&apos;s your financial overview.</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-extrabold font-[var(--font-headline)] tracking-tight text-tertiary mb-1">Admin Dashboard</h2>
+          <p className="text-on-surface-variant text-sm">
+            Showing performance for <span className="text-tertiary font-bold capitalize">{activeTab}</span> period.
+          </p>
+        </div>
+        
+        {/* Modern Tab Navigation */}
+        <div className="flex bg-surface-container-high p-1 rounded-xl w-fit border border-outline-variant/10">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                activeTab === tab.id 
+                  ? 'bg-surface-container-lowest text-tertiary shadow-md transform scale-[1.02]' 
+                  : 'text-on-surface-variant hover:text-tertiary hover:bg-surface-container-low'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Categorized Stats grid */}
-      <div className="space-y-6 mb-12">
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <CardSkeleton /><CardSkeleton /><CardSkeleton />
+      {/* Main Content */}
+      <div className="space-y-12">
+        {loading || !currentStats ? (
+          <div className="space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
           </div>
         ) : (
           <>
-            <div>
-              <h3 className="text-sm font-bold text-tertiary mb-3 uppercase tracking-widest border-b border-outline-variant/30 pb-1">Collections (Actual vs Expected)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard label="Today's Collections" value={stats.todayActual} subtitle={`of ${stats.todayExpected} expected`} variant="primary" />
-                <StatCard label="This Week's Collections" value={stats.weekActual} subtitle={`of ${stats.weekExpected} expected`} variant="primary" />
-                <StatCard label="This Month's Collections" value={stats.monthActual} subtitle={`of ${stats.monthExpected} expected`} variant="default" />
+            {/* Collections Section */}
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-6 w-1.5 bg-accent rounded-full shadow-[0_0_8px_rgba(var(--color-accent),0.5)]"></div>
+                <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Collection Performance</h3>
               </div>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <StatCard label={`Expected (${activeTab})`} value={currentStats.expected} variant="primary" />
+                <StatCard label={`Received (${activeTab})`} value={currentStats.actual} subtitle={`of ${currentStats.expected} target`} variant="accent" />
+                <StatCard label={`Pending (${activeTab})`} value={currentStats.pending} variant="error" />
+              </div>
+            </section>
 
-            <div>
-              <h3 className="text-sm font-bold text-tertiary mb-3 uppercase tracking-widest border-b border-outline-variant/30 pb-1 mt-6">Overall Portfolio</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard label="Total Customers" value={String(stats.totalCustomers)} variant="default" />
-                <StatCard label="Total Sanctioned" value={stats.totalSanctioned} variant="accent" />
-                <StatCard label="Total Outstanding" value={stats.totalOutstanding} variant="default" />
+            {/* Overall Portfolio Section */}
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-6 w-1.5 bg-secondary rounded-full"></div>
+                <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Portfolio Metrics</h3>
               </div>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <StatCard label="New Customers" value={String(currentStats.customers)} subtitle={`Acquired this ${activeTab}`} variant="default" />
+                <StatCard label="Amount Sanctioned" value={currentStats.sanctioned} variant="accent" />
+                <StatCard label="Outstanding Balance" value={currentStats.outstanding} variant="default" />
+              </div>
+            </section>
             
-            <div>
-              <h3 className="text-sm font-bold text-error mb-3 uppercase tracking-widest border-b border-outline-variant/30 pb-1 mt-6">Risk & Delinquency</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <StatCard label="Overdue Alerts" value={String(stats.overdueCount)} subtitle="Immediate follow-up" variant="error" />
-                 <StatCard label="NPA Count" value={String(stats.npaCount)} subtitle="Non-Performing Assets" variant="error" />
+            {/* Risk & Delinquency Section */}
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-6 w-1.5 bg-error rounded-full shadow-[0_0_8px_rgba(var(--color-error),0.5)]"></div>
+                <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Risk & Delinquency</h3>
               </div>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                 <StatCard label="Overdue Alerts" value={String(currentStats.overdue)} subtitle={`Flagged this ${activeTab}`} variant="error" />
+                 <StatCard label="NPA Count" value={String(currentStats.npa)} subtitle={`Classified this ${activeTab}`} variant="error" />
+              </div>
+            </section>
           </>
         )}
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant/10">
-          <span className="text-sm font-bold text-tertiary">Recent Activity</span>
+      <div className="mt-16 bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10 shadow-lg">
+        <div className="px-8 py-6 border-b border-outline-variant/10 bg-surface-container-low/50 flex items-center justify-between">
+          <div>
+            <span className="text-lg font-bold text-tertiary">Recent Activity</span>
+            <p className="text-xs text-on-surface-variant mt-0.5">Latest system-wide events and transactions</p>
+          </div>
+          <button className="text-sm font-bold text-accent hover:underline px-4 py-2 rounded-lg hover:bg-accent/5 transition-colors">View Full Audit Log</button>
         </div>
-        <div className="divide-y divide-surface-container">
+        <div className="divide-y divide-outline-variant/5">
           {recentActivity.map((item) => (
-            <div key={item.id} className="px-6 py-4 flex items-center gap-4 hover:bg-surface transition-colors">
-              <div className={`w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center ${item.color}`}>
-                <span className="material-symbols-outlined text-lg">{item.icon}</span>
+            <div key={item.id} className="px-8 py-5 flex items-center gap-6 hover:bg-surface-container-low/30 transition-all duration-200 group">
+              <div className={`w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
+                <span className="material-symbols-outlined text-2xl">{item.icon}</span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-tertiary">{item.action}</p>
-                <p className="text-xs text-on-surface-variant">{item.customer}</p>
+                <p className="text-[16px] font-bold text-tertiary leading-snug">{item.action}</p>
+                <p className="text-sm text-on-surface-variant mt-0.5">{item.customer}</p>
               </div>
-              <span className="text-xs text-on-surface-variant font-mono">{item.time}</span>
+              <span className="text-xs text-on-surface-variant font-mono bg-surface-container-high px-3 py-1.5 rounded-lg border border-outline-variant/5">{item.time}</span>
             </div>
           ))}
         </div>

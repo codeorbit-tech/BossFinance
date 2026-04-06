@@ -3,6 +3,7 @@
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import { Toaster } from 'react-hot-toast';
+import { Suspense } from 'react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,7 +25,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       />
       <Sidebar />
       <main className="ml-0 lg:ml-64 min-h-screen transition-all">
-        <TopNav />
+        <Suspense fallback={<div className="h-16 bg-surface border-b border-outline-variant/10 w-full" />}>
+          <TopNav />
+        </Suspense>
         <div className="p-4 sm:p-6 lg:p-8">
           {children}
         </div>

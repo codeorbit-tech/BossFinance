@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import StatusBadge from '@/components/StatusBadge';
 import Pagination from '@/components/Pagination';
 
@@ -20,8 +20,11 @@ const loanTypes = ['All', 'Home', 'Vehicle', 'Personal', 'Business', 'Daily'];
 const statusFilters = ['All', 'Active', 'Closed', 'Overdue', 'Pending', 'NPA'];
 const frequencyFilters = ['All', 'Daily', 'Weekly', 'Monthly'];
 
-export default function CustomersPage() {
+function CustomersList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('search')?.toLowerCase() || '';
+
   const [loanTypeFilter, setLoanTypeFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [frequencyFilter, setFrequencyFilter] = useState('All');
@@ -31,6 +34,14 @@ export default function CustomersPage() {
     if (loanTypeFilter !== 'All' && c.loanType !== loanTypeFilter.toUpperCase()) return false;
     if (statusFilter !== 'All' && c.status !== statusFilter.toUpperCase()) return false;
     if (frequencyFilter !== 'All' && c.frequency !== frequencyFilter.toUpperCase()) return false;
+    
+    // Search filter
+    if (searchQuery) {
+      const matchesId = c.customerId.toLowerCase().includes(searchQuery);
+      const matchesName = c.name.toLowerCase().includes(searchQuery);
+      if (!matchesId && !matchesName) return false;
+    }
+
     return true;
   });
 
@@ -103,5 +114,13 @@ export default function CustomersPage() {
         <Pagination page={page} totalPages={1} onPageChange={setPage} />
       </div>
     </div>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CustomersList />
+    </Suspense>
   );
 }

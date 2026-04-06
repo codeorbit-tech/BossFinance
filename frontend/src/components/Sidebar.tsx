@@ -22,8 +22,7 @@ const adminNav = [
 
 const employeeNav = [
   { href: '/employee/dashboard', icon: 'dashboard', label: 'Dashboard' },
-  { href: '/employee/create-customer', icon: 'person_add', label: 'Create Customer' },
-  { href: '/employee/loan-form', icon: 'description', label: 'Loan Application' },
+  { href: '/employee/loan-form', icon: 'person_add', label: 'New Loan' },
   { href: '/employee/submissions', icon: 'list_alt', label: 'My Submissions' },
 ];
 
@@ -56,19 +55,19 @@ export default function Sidebar() {
 
       <aside
         className={`h-screen fixed left-0 top-0 bg-primary flex flex-col py-6 z-50 transition-all duration-200 ease-in-out font-[var(--font-headline)] tracking-tight
-          ${collapsed ? 'w-0 -translate-x-full lg:w-16 lg:translate-x-0' : 'w-64'}
+          ${collapsed ? 'w-0 -translate-x-full lg:w-20 lg:translate-x-0' : 'w-64'}
         `}
       >
         {/* Logo */}
-        <div className={`px-6 mb-8 ${collapsed ? 'lg:px-3' : ''}`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>house</span>
+        <div className={`px-4 mb-8 ${collapsed ? 'lg:px-2' : ''}`}>
+          <div className={`flex items-center ${collapsed ? 'flex-col gap-2' : 'gap-3'}`}>
+            <div className={`bg-white rounded-xl flex items-center justify-center shrink-0 overflow-hidden border-2 border-white/20 ${collapsed ? 'w-14 h-14' : 'w-12 h-12'}`}>
+              <img src="/BossLogo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             {!collapsed && (
               <div className="overflow-hidden">
                 <h1 className="text-xl font-bold text-white leading-tight">Boss Finance</h1>
-                <p className="text-[10px] text-accent uppercase tracking-widest">Consulting Admin</p>
+                <p className="text-[10px] text-accent uppercase tracking-widest font-black">Consulting</p>
               </div>
             )}
           </div>
@@ -99,7 +98,7 @@ export default function Sidebar() {
         <div className="mt-auto pt-6 border-t border-white/10 mx-4 space-y-1">
           <div className={`flex items-center gap-3 text-slate-400 px-4 py-3 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
             <span className="material-symbols-outlined">account_circle</span>
-            {!collapsed && <span className="text-sm font-medium">{user?.name || 'Profile'}</span>}
+            {!collapsed && <span className="text-sm font-medium truncate">{user?.name || 'Profile'}</span>}
           </div>
           <button
             onClick={handleLogout}

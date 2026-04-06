@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface User {
   name: string;
@@ -9,27 +10,44 @@ interface User {
 
 export default function TopNav() {
   const [user, setUser] = useState<User | null>(null);
-  const [search, setSearch] = useState('');
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') || '';
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (stored) setUser(JSON.parse(stored));
   }, []);
 
+  const handleSearchChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const showSearch = pathname.startsWith('/admin/customers');
+
   return (
     <header className="h-16 flex justify-between items-center sticky top-0 z-40 bg-surface px-8 w-full font-[var(--font-body)] text-sm border-b border-outline-variant/10">
       {/* Search */}
       <div className="flex items-center gap-4 w-1/3">
-        <div className="relative w-full max-w-md">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by customer ID or name..."
-            className="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-on-surface focus:ring-2 focus:ring-accent transition-all outline-none"
-          />
-        </div>
+        {showSearch && (
+          <div className="relative w-full max-w-md">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search by customer ID or name..."
+              className="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-on-surface focus:ring-2 focus:ring-accent transition-all outline-none"
+            />
+          </div>
+        )}
       </div>
 
       {/* Right side */}
