@@ -26,8 +26,8 @@ export const SAMPLE_FORM_DATA: VehicleLoanFormData = {
     gender: 'Male', dob: '1988-05-15',
     fatherFirstName: 'Ramesh', fatherMiddleName: 'Lal', fatherLastName: 'Sharma',
     motherFirstName: 'Sunita', motherMiddleName: '', motherLastName: 'Devi',
-    religion: ['Hindu'], religionOther: '',
-    category: ['General'], categoryOther: '',
+    religion: 'Hindu', religionOther: '',
+    category: 'General', categoryOther: '',
     preferredLanguage: 'English', preferredLanguageOther: '',
   },
   coApplicantPersonal: {
@@ -35,8 +35,8 @@ export const SAMPLE_FORM_DATA: VehicleLoanFormData = {
     gender: 'Female', dob: '1991-11-23',
     fatherFirstName: 'Suresh', fatherMiddleName: '', fatherLastName: 'Nair',
     motherFirstName: 'Meena', motherMiddleName: '', motherLastName: 'Nair',
-    religion: ['Hindu'], religionOther: '',
-    category: ['General'], categoryOther: '',
+    religion: 'Hindu', religionOther: '',
+    category: 'General', categoryOther: '',
     preferredLanguage: 'English', preferredLanguageOther: '',
   },
   guarantorPersonal: {
@@ -44,8 +44,8 @@ export const SAMPLE_FORM_DATA: VehicleLoanFormData = {
     gender: 'Male', dob: '1975-03-08',
     fatherFirstName: 'Krishna', fatherMiddleName: '', fatherLastName: 'Pillai',
     motherFirstName: 'Lakshmi', motherMiddleName: '', motherLastName: 'Pillai',
-    religion: ['Hindu'], religionOther: '',
-    category: ['OBC'], categoryOther: '',
+    religion: 'Hindu', religionOther: '',
+    category: 'OBC', categoryOther: '',
     preferredLanguage: 'Others', preferredLanguageOther: 'Tamil',
   },
 

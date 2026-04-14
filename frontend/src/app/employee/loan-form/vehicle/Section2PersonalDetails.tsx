@@ -58,20 +58,13 @@ function GenderRadio({ value, onChange }: { value: Gender | ''; onChange: (v: Ge
   );
 }
 
-function CheckboxGroup<T extends string>({
-  label, options, selected, onChange, showOther, otherValue, onOtherChange
+function RadioGroup<T extends string>({
+  label, options, value, onChange, showOther, otherValue, onOtherChange
 }: {
-  label: string; options: T[]; selected: T[];
-  onChange: (v: T[]) => void; showOther?: boolean;
+  label: string; options: T[]; value: T | '';
+  onChange: (v: T) => void; showOther?: boolean;
   otherValue?: string; onOtherChange?: (v: string) => void;
 }) {
-  const toggle = (val: T) => {
-    if (selected.includes(val)) {
-      onChange(selected.filter(s => s !== val));
-    } else {
-      onChange([...selected, val]);
-    }
-  };
   return (
     <div>
       <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{label}</label>
@@ -79,22 +72,22 @@ function CheckboxGroup<T extends string>({
         {options.map(opt => (
           <label key={opt} className="flex items-center gap-1.5 cursor-pointer">
             <div
-              onClick={() => toggle(opt)}
-              className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer ${
-                selected.includes(opt)
+              onClick={() => onChange(opt)}
+              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 ${
+                value === opt
                   ? 'bg-accent border-accent'
                   : 'border-outline-variant hover:border-accent/60'
               }`}
             >
-              {selected.includes(opt) && (
+              {value === opt && (
                 <span className="material-symbols-outlined text-white text-[10px]" style={{ fontVariationSettings: "'FILL' 1", fontSize: '10px' }}>check</span>
               )}
             </div>
-            <span className="text-xs text-on-surface-variant" onClick={() => toggle(opt)}>{opt}</span>
+            <span className="text-xs text-on-surface-variant">{opt}</span>
           </label>
         ))}
       </div>
-      {showOther && selected.includes('Others' as T) && (
+      {showOther && value === 'Others' && (
         <input
           type="text"
           value={otherValue}
@@ -165,10 +158,10 @@ function PartyColumn({
 
       {/* Religion */}
       <div className="bg-surface-container/50 rounded-xl p-3">
-        <CheckboxGroup
+        <RadioGroup
           label="Religion"
           options={RELIGIONS}
-          selected={party.religion}
+          value={party.religion}
           onChange={v => onChange({ religion: v })}
           showOther
           otherValue={party.religionOther}
@@ -178,10 +171,10 @@ function PartyColumn({
 
       {/* Category */}
       <div className="bg-surface-container/50 rounded-xl p-3">
-        <CheckboxGroup
+        <RadioGroup
           label="Category"
           options={CATEGORIES}
-          selected={party.category}
+          value={party.category}
           onChange={v => onChange({ category: v })}
           showOther
           otherValue={party.categoryOther}

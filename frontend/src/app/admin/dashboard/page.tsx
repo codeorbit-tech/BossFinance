@@ -3,58 +3,61 @@
 import { useState, useEffect } from 'react';
 import StatCard from '@/components/StatCard';
 import { CardSkeleton } from '@/components/Skeletons';
+import { analyticsApi } from '@/lib/api';
+import { toast } from 'react-hot-toast';
+
+interface Activity {
+  id: string;
+  action: string;
+  customer: string;
+  time: string;
+  icon: string;
+  color: string;
+}
+
+interface DashboardStats {
+  expected: string;
+  actual: string;
+  pending: string;
+  customers: number;
+  sanctioned: string;
+  outstanding: string;
+  overdue: number;
+  npa: number;
+}
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('daily');
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+
+  const fetchRecentActivity = async () => {
+    try {
+      const res = await analyticsApi.getRecentActivity();
+      setRecentActivity(res.data);
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const res = await analyticsApi.getDashboard(activeTab);
+      setStats(res.data);
+    } catch {
+      toast.error('Failed to fetch dashboard statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulating API fetch with period-specific data
-    setTimeout(() => {
-      setStats({
-        daily: {
-          expected: '₹5,500',
-          actual: '₹4,800',
-          pending: '₹700',
-          customers: 2,
-          sanctioned: '₹1,50,000',
-          outstanding: '₹1,42,000',
-          overdue: 1,
-          npa: 0,
-        },
-        weekly: {
-          expected: '₹38,500',
-          actual: '₹32,200',
-          pending: '₹6,300',
-          customers: 12,
-          sanctioned: '₹8,25,000',
-          outstanding: '₹7,15,500',
-          overdue: 4,
-          npa: 1,
-        },
-        monthly: {
-          expected: '₹1,65,000',
-          actual: '₹1,42,500',
-          pending: '₹22,500',
-          customers: 48,
-          sanctioned: '₹32,62,500',
-          outstanding: '₹24,21,999',
-          overdue: 14,
-          npa: 3,
-        }
-      });
-      setLoading(false);
-    }, 800);
-  }, []);
-
-  const recentActivity = [
-    { id: 1, action: 'Loan approved', customer: 'Arjun Mehta (BF-2024-001)', time: '2 hours ago', icon: 'check_circle', color: 'text-accent' },
-    { id: 2, action: 'Payment received', customer: 'Vikram Singh (BF-2024-009)', time: '4 hours ago', icon: 'payments', color: 'text-accent' },
-    { id: 3, action: 'Overdue alert', customer: 'Priya Sharma (BF-2023-842)', time: '1 day ago', icon: 'warning', color: 'text-error' },
-    { id: 4, action: 'New customer created', customer: 'Karan Patel (BF-2024-033)', time: '2 days ago', icon: 'person_add', color: 'text-secondary' },
-    { id: 5, action: 'Loan application submitted', customer: 'Meera Joshi (BF-2024-022)', time: '3 days ago', icon: 'description', color: 'text-tertiary' },
-  ];
+    fetchDashboardData();
+    fetchRecentActivity();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const tabs = [
     { id: 'daily', label: 'Daily', icon: 'today' },
@@ -62,7 +65,18 @@ export default function AdminDashboard() {
     { id: 'monthly', label: 'Monthly', icon: 'calendar_month' },
   ];
 
-  const currentStats = stats ? stats[activeTab as keyof typeof stats] : null;
+  const formatTime = (dateString: string) => {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffInMs = now.getTime() - past.getTime();
+    const diffInMins = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMins < 60) return `${diffInMins} mins ago`;
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    return `${diffInDays} days ago`;
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto pb-12">
@@ -96,7 +110,7 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="space-y-12">
-        {loading || !currentStats ? (
+        {loading || !stats ? (
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
@@ -110,9 +124,9 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Collection Performance</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard label={`Expected (${activeTab})`} value={currentStats.expected} variant="primary" />
-                <StatCard label={`Received (${activeTab})`} value={currentStats.actual} subtitle={`of ${currentStats.expected} target`} variant="accent" />
-                <StatCard label={`Pending (${activeTab})`} value={currentStats.pending} variant="error" />
+                <StatCard label={`Expected (${activeTab})`} value={stats.expected} variant="primary" />
+                <StatCard label={`Received (${activeTab})`} value={stats.actual} subtitle={`of ${stats.expected} target`} variant="accent" />
+                <StatCard label={`Pending (${activeTab})`} value={stats.pending} variant="error" />
               </div>
             </section>
 
@@ -123,9 +137,9 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Portfolio Metrics</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard label="New Customers" value={String(currentStats.customers)} subtitle={`Acquired this ${activeTab}`} variant="default" />
-                <StatCard label="Amount Sanctioned" value={currentStats.sanctioned} variant="accent" />
-                <StatCard label="Outstanding Balance" value={currentStats.outstanding} variant="default" />
+                <StatCard label="New Customers" value={String(stats.customers)} subtitle={`Acquired this ${activeTab}`} variant="default" />
+                <StatCard label="Amount Sanctioned" value={stats.sanctioned} variant="accent" />
+                <StatCard label="Outstanding Balance" value={stats.outstanding} variant="default" />
               </div>
             </section>
             
@@ -136,8 +150,8 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Risk & Delinquency</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                 <StatCard label="Overdue Alerts" value={String(currentStats.overdue)} subtitle={`Flagged this ${activeTab}`} variant="error" />
-                 <StatCard label="NPA Count" value={String(currentStats.npa)} subtitle={`Classified this ${activeTab}`} variant="error" />
+                 <StatCard label="Overdue Alerts" value={String(stats.overdue)} subtitle={`Currently active`} variant="error" />
+                 <StatCard label="NPA Count" value={String(stats.npa)} subtitle={`Total classified`} variant="error" />
               </div>
             </section>
           </>
@@ -151,21 +165,28 @@ export default function AdminDashboard() {
             <span className="text-lg font-bold text-tertiary">Recent Activity</span>
             <p className="text-xs text-on-surface-variant mt-0.5">Latest system-wide events and transactions</p>
           </div>
-          <button className="text-sm font-bold text-accent hover:underline px-4 py-2 rounded-lg hover:bg-accent/5 transition-colors">View Full Audit Log</button>
+          <button onClick={fetchRecentActivity} className="text-sm font-bold text-accent hover:underline px-4 py-2 rounded-lg hover:bg-accent/5 transition-colors flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">refresh</span>
+            Refresh
+          </button>
         </div>
-        <div className="divide-y divide-outline-variant/5">
-          {recentActivity.map((item) => (
-            <div key={item.id} className="px-8 py-5 flex items-center gap-6 hover:bg-surface-container-low/30 transition-all duration-200 group">
-              <div className={`w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
-                <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+        <div className="divide-y divide-outline-variant/5 min-h-[200px]">
+          {recentActivity.length === 0 ? (
+            <div className="p-12 text-center text-on-surface-variant font-bold">No recent activity recorded.</div>
+          ) : (
+            recentActivity.map((item) => (
+              <div key={item.id} className="px-8 py-5 flex items-center gap-6 hover:bg-surface-container-low/30 transition-all duration-200 group">
+                <div className={`w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
+                  <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-[16px] font-bold text-tertiary leading-snug">{item.action}</p>
+                  <p className="text-sm text-on-surface-variant mt-0.5">{item.customer}</p>
+                </div>
+                <span className="text-xs text-on-surface-variant font-mono bg-surface-container-high px-3 py-1.5 rounded-lg border border-outline-variant/5">{formatTime(item.time)}</span>
               </div>
-              <div className="flex-1">
-                <p className="text-[16px] font-bold text-tertiary leading-snug">{item.action}</p>
-                <p className="text-sm text-on-surface-variant mt-0.5">{item.customer}</p>
-              </div>
-              <span className="text-xs text-on-surface-variant font-mono bg-surface-container-high px-3 py-1.5 rounded-lg border border-outline-variant/5">{item.time}</span>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

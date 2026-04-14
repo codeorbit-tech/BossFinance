@@ -1,48 +1,102 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StatusBadge from '@/components/StatusBadge';
+import { customersApi } from '@/lib/api';
+import { toast } from 'react-hot-toast';
+
+interface AuditLog {
+  id: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  createdAt: string;
+  changedBy?: { name: string };
+}
+
+interface Repayment {
+  id: string;
+  amount: number;
+  paidAt: string;
+  status: string;
+  method: string;
+}
+
+interface Loan {
+  id: string;
+  loanType: string;
+  amount: number;
+  emi: number;
+  frequency: string;
+  status: string;
+  totalPaid: number;
+  currentBalance: number;
+  disbursedAt: string | null;
+  approvedAt: string | null;
+  collateralDetails: string | null;
+  guarantorName: string | null;
+  guarantorPhone: string | null;
+  repayments: Repayment[];
+}
+
+interface Customer {
+  id: string;
+  customerId: string;
+  name: string;
+  phone: string;
+  address: string;
+  aadhaar: string;
+  pan: string;
+  status: string;
+  bankName: string;
+  bankAccount: string;
+  bankIfsc: string;
+  loans: Loan[];
+  auditLogs: AuditLog[];
+}
 
 export default function CustomerDetailPage() {
   const params = useParams();
+  const id = params.id as string;
+  
   const [activeTab, setActiveTab] = useState<'profile' | 'payment-history' | 'audit-trail'>('payment-history');
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showOtpModal, setShowOtpModal] = useState(false);
 
-  // Mock data matching the specific checklist exact text output
-  const customer = {
-    id: 'BFC-001',
-    name: 'Rajesh Kumar',
-    phone: '+91 98765 00001',
-    address: '12 MG Road, Mumbai',
-    aadhaar: '1234 5678 9012',
-    pan: 'ABCDE1234F',
-    bank: { name: 'HDFC', account: '501002345', ifsc: 'HDFC0001' },
-    status: 'ACTIVE',
-    loans: [
-      {
-        loanType: 'PERSONAL',
-        amount: 50000,
-        interestRate: 0,
-        tenure: 10,
-        frequency: 'MONTHLY',
-        disbursementDate: '05 Dec 2025',
-        sanctionDate: '01 Dec 2025',
-        emi: 5167,
-        collateral: 'Gold chain 10g',
-        guarantor: 'Vikram Mehta (+91 91234 56780)',
-        totalPaid: 10334,
-        outstanding: 39666,
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      setIsLoading(true);
+      try {
+        const res = await customersApi.get(id);
+        setCustomer(res.data.customer);
+      } catch {
+        toast.error('Failed to fetch customer details');
+      } finally {
+        setIsLoading(false);
       }
-    ]
+    };
+    fetchCustomer();
+  }, [id]);
+
+  const handleMarkNpa = async () => {
+    if (!confirm('Are you sure you want to mark this customer as NPA? This will halt automated collections.')) return;
+    try {
+      await customersApi.markNpa(id);
+      toast.success('Customer marked as NPA');
+      // Re-fetch
+      const res = await customersApi.get(id);
+      setCustomer(res.data.customer);
+    } catch {
+      toast.error('Failed to update status');
+    }
   };
 
-  const paymentHistory = [
-    { num: 1, date: '01 Jan 2026', amount: 5167, status: 'PAID', balance: 44833 },
-    { num: 2, date: '01 Feb 2026', amount: 5167, status: 'PAID', balance: 39666 },
-    { num: 3, date: '01 Mar 2026', amount: 5167, penal: 200, status: 'OVERDUE', balance: 34499 },
-    { num: 4, date: '01 Apr 2026', amount: 5167, status: 'UPCOMING', balance: 29332 },
-  ];
+  if (isLoading) return <div className="p-12 text-center text-on-surface-variant font-bold animate-pulse">Loading profile...</div>;
+  if (!customer) return <div className="p-12 text-center text-on-surface-variant font-bold">Customer not found.</div>;
+
+  const activeLoan = customer.loans[0];
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -57,7 +111,7 @@ export default function CustomerDetailPage() {
               <h2 className="text-2xl font-extrabold font-[var(--font-headline)] text-tertiary">{customer.name}</h2>
               <StatusBadge status={customer.status} />
             </div>
-            <p className="text-sm text-on-surface-variant font-mono">ID: {customer.id}</p>
+            <p className="text-sm text-on-surface-variant font-mono">ID: {customer.customerId}</p>
           </div>
         </div>
         <div className="flex gap-3">
@@ -65,7 +119,11 @@ export default function CustomerDetailPage() {
             <span className="material-symbols-outlined text-sm">edit</span>
             Edit Details
           </button>
-          <button className="px-4 py-2 bg-error/10 text-error font-bold text-sm rounded-lg hover:bg-error/20 transition-colors">
+          <button 
+            onClick={handleMarkNpa}
+            disabled={customer.status === 'NPA'}
+            className="px-4 py-2 bg-error/10 text-error font-bold text-sm rounded-lg hover:bg-error/20 transition-colors disabled:opacity-50"
+          >
             Mark NPA
           </button>
         </div>
@@ -74,13 +132,13 @@ export default function CustomerDetailPage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-8 bg-surface-container-low p-1.5 rounded-xl w-fit">
         {[
-          { id: 'payment-history', label: 'Payment History', icon: 'payments' },
-          { id: 'profile', label: 'Customer Profile', icon: 'person' },
-          { id: 'audit-trail', label: 'Audit Trail', icon: 'history' },
+          { id: 'payment-history' as const, label: 'Payment History', icon: 'payments' },
+          { id: 'profile' as const, label: 'Customer Profile', icon: 'person' },
+          { id: 'audit-trail' as const, label: 'Audit Trail', icon: 'history' },
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id as any)}
+            onClick={() => setActiveTab(t.id)}
             className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${
               activeTab === t.id ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-container'
             }`}
@@ -95,53 +153,55 @@ export default function CustomerDetailPage() {
       {activeTab === 'payment-history' && (
         <div className="space-y-6">
           <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-6 font-mono text-sm overflow-x-auto shadow-sm">
-            <div className="text-tertiary mb-6 pb-6 border-b border-dashed border-outline-variant/50">
-              <div className="flex justify-between items-center mb-2 font-bold text-base">
-                <span>Customer: {customer.name} | ID: {customer.id}</span>
-                <button className="text-xs text-accent underline decoration-accent/30 font-sans">Download Ledger</button>
-              </div>
-              <div className="text-on-surface-variant">
-                Loan Amount: ₹{customer.loans[0].amount.toLocaleString()} | EMI: ₹{customer.loans[0].emi.toLocaleString()}/{customer.loans[0].frequency.toLowerCase()}
-              </div>
-            </div>
+            {activeLoan ? (
+              <>
+                <div className="text-tertiary mb-6 pb-6 border-b border-dashed border-outline-variant/50">
+                  <div className="flex justify-between items-center mb-2 font-bold text-base">
+                    <span>Customer: {customer.name} | ID: {customer.customerId}</span>
+                    <button className="text-xs text-accent underline decoration-accent/30 font-sans">Download Ledger</button>
+                  </div>
+                  <div className="text-on-surface-variant">
+                    Loan Amount: ₹{activeLoan.amount.toLocaleString()} | EMI: ₹{activeLoan.emi.toLocaleString()}/{activeLoan.frequency.toLowerCase()}
+                  </div>
+                </div>
 
-            <div className="mb-4 text-tertiary font-bold tracking-widest uppercase">Payment History</div>
-            
-            <table className="w-full text-left mb-6 whitespace-nowrap">
-              <thead>
-                <tr className="border-y-2 border-outline-variant/20 text-on-surface-variant">
-                  <th className="py-2.5 font-bold w-12">#</th>
-                  <th className="py-2.5 font-bold">Date</th>
-                  <th className="py-2.5 font-bold">Amount</th>
-                  <th className="py-2.5 font-bold">Status</th>
-                  <th className="py-2.5 font-bold text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/10">
-                {paymentHistory.map((p) => (
-                  <tr key={p.num} className="text-tertiary">
-                    <td className="py-3 align-top">{p.num}</td>
-                    <td className="py-3 align-top">{p.date}</td>
-                    <td className="py-3 align-top text-on-primary-container font-medium">
-                      ₹{p.amount.toLocaleString()}
-                      {p.penal && <div className="text-error text-xs mt-1">+₹{p.penal} Penal</div>}
-                    </td>
-                    <td className="py-3 align-top">
-                      <span className={`font-bold ${
-                        p.status === 'PAID' ? 'text-accent' :
-                        p.status === 'OVERDUE' ? 'text-error' : 'text-on-surface-variant'
-                      }`}>{p.status}</span>
-                    </td>
-                    <td className="py-3 align-top text-right font-medium">₹{p.balance.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <div className="border-t-2 border-outline-variant/20 pt-4 flex justify-between font-bold text-tertiary">
-              <span>Total Paid: ₹{customer.loans[0].totalPaid.toLocaleString()}</span>
-              <span>Outstanding: ₹{customer.loans[0].outstanding.toLocaleString()}</span>
-            </div>
+                <div className="mb-4 text-tertiary font-bold tracking-widest uppercase">Payment History</div>
+                
+                <table className="w-full text-left mb-6 whitespace-nowrap">
+                  <thead>
+                    <tr className="border-y-2 border-outline-variant/20 text-on-surface-variant">
+                      <th className="py-2.5 font-bold">Date</th>
+                      <th className="py-2.5 font-bold">Amount</th>
+                      <th className="py-2.5 font-bold">Method</th>
+                      <th className="py-2.5 font-bold text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {activeLoan.repayments.length === 0 ? (
+                      <tr><td colSpan={4} className="py-8 text-center text-on-surface-variant">No repayment records found.</td></tr>
+                    ) : (
+                      activeLoan.repayments.map((p) => (
+                        <tr key={p.id} className="text-tertiary">
+                          <td className="py-3">{new Date(p.paidAt).toLocaleDateString()}</td>
+                          <td className="py-3 font-medium text-on-primary-container">₹{p.amount.toLocaleString()}</td>
+                          <td className="py-3">{p.method}</td>
+                          <td className="py-3 text-right">
+                            <span className={`font-bold ${p.status === 'SUCCESS' ? 'text-accent' : 'text-on-surface-variant'}`}>{p.status}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+                
+                <div className="border-t-2 border-outline-variant/20 pt-4 flex justify-between font-bold text-tertiary">
+                  <span>Total Paid: ₹{activeLoan.totalPaid.toLocaleString()}</span>
+                  <span>Outstanding: ₹{(activeLoan.amount - activeLoan.totalPaid).toLocaleString()}</span>
+                </div>
+              </>
+            ) : (
+              <div className="p-12 text-center text-on-surface-variant font-bold">No active loans for this customer.</div>
+            )}
           </div>
           
           <div className="flex justify-end">
@@ -158,31 +218,33 @@ export default function CustomerDetailPage() {
           <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10">
             <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2">Personal Identity</h3>
             <div className="space-y-4">
-              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Phone Number</span><span className="font-bold text-sm text-tertiary">{customer.phone}</span></div>
-              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Address</span><span className="font-bold text-sm text-tertiary">{customer.address}</span></div>
-              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Aadhaar (Masked)</span><span className="font-bold text-base tracking-widest text-tertiary">XXXX XXXX {customer.aadhaar.slice(-4)}</span></div>
-              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">PAN Number</span><span className="font-bold text-sm text-tertiary tracking-wider">{customer.pan}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Phone Number</span><span className="font-bold text-sm text-tertiary">{customer.phone || '—'}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Address</span><span className="font-bold text-sm text-tertiary">{customer.address || '—'}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Aadhaar (Masked)</span><span className="font-bold text-base tracking-widest text-tertiary">XXXX XXXX {customer.aadhaar?.slice(-4) || '—'}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">PAN Number</span><span className="font-bold text-sm text-tertiary tracking-wider">{customer.pan || '—'}</span></div>
             </div>
           </div>
           
           <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10">
             <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2">Financial Profile</h3>
             <div className="space-y-4">
-              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Bank Information</span><span className="font-bold text-sm text-tertiary">{customer.bank.name} - A/c: {customer.bank.account}</span><span className="text-xs text-on-surface-variant mt-0.5">IFSC: {customer.bank.ifsc}</span></div>
-              <div className="flex flex-col mt-6"><span className="text-xs text-on-surface-variant mb-0.5">Collateral Locked</span><span className="font-bold text-sm text-tertiary bg-warning/10 p-2 rounded-md">{customer.loans[0].collateral}</span></div>
-              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Guarantor</span><span className="font-bold text-sm text-tertiary">{customer.loans[0].guarantor}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Bank Information</span><span className="font-bold text-sm text-tertiary">{customer.bankName || '—'} - A/c: {customer.bankAccount || '—'}</span><span className="text-xs text-on-surface-variant mt-0.5">IFSC: {customer.bankIfsc || '—'}</span></div>
+              <div className="flex flex-col mt-6"><span className="text-xs text-on-surface-variant mb-0.5">Collateral Locked</span><span className="font-bold text-sm text-tertiary bg-warning/10 p-2 rounded-md">{activeLoan?.collateralDetails || 'None'}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Guarantor</span><span className="font-bold text-sm text-tertiary">{activeLoan?.guarantorName ? `${activeLoan.guarantorName} (${activeLoan.guarantorPhone})` : '—'}</span></div>
             </div>
           </div>
 
-          <div className="md:col-span-2 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 mt-2">
-            <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2">Primary Loan Snapshot</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-               <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Loan Type</span><span className="font-bold text-sm text-tertiary capitalize">{customer.loans[0].loanType.toLowerCase()}</span></div>
-               <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Frequency</span><span className="font-bold text-sm text-tertiary capitalize">{customer.loans[0].frequency.toLowerCase()}</span></div>
-               <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Sanctioned</span><span className="font-bold text-sm text-tertiary">{customer.loans[0].sanctionDate}</span></div>
-               <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Disbursed</span><span className="font-bold text-sm text-tertiary">{customer.loans[0].disbursementDate}</span></div>
+          {activeLoan && (
+            <div className="md:col-span-2 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 mt-2">
+              <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2">Primary Loan Snapshot</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                 <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Loan Type</span><span className="font-bold text-sm text-tertiary capitalize">{activeLoan.loanType.toLowerCase()}</span></div>
+                 <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Frequency</span><span className="font-bold text-sm text-tertiary capitalize">{activeLoan.frequency.toLowerCase()}</span></div>
+                 <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Approved On</span><span className="font-bold text-sm text-tertiary">{activeLoan.approvedAt ? new Date(activeLoan.approvedAt).toLocaleDateString() : '—'}</span></div>
+                 <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Disbursed On</span><span className="font-bold text-sm text-tertiary">{activeLoan.disbursedAt ? new Date(activeLoan.disbursedAt).toLocaleDateString() : '—'}</span></div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -199,20 +261,19 @@ export default function CustomerDetailPage() {
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-outline-variant/10">
-               <tr className="hover:bg-surface transition-colors">
-                  <td className="px-6 py-4 text-xs text-on-surface-variant font-mono">2026-04-03 14:22:05</td>
-                  <td className="px-6 py-4 font-medium text-tertiary">Aditya Varma</td>
-                  <td className="px-6 py-4">status</td>
-                  <td className="px-6 py-4 text-error font-medium line-through">OVERDUE</td>
-                  <td className="px-6 py-4 text-accent font-bold">NPA</td>
-               </tr>
-               <tr className="hover:bg-surface transition-colors">
-                  <td className="px-6 py-4 text-xs text-on-surface-variant font-mono">2026-03-10 09:12:30</td>
-                  <td className="px-6 py-4 font-medium text-tertiary">Ramesh Kumar</td>
-                  <td className="px-6 py-4">collateralDetails</td>
-                  <td className="px-6 py-4 text-error font-medium line-through">None</td>
-                  <td className="px-6 py-4 text-accent font-bold">Gold chain 10g</td>
-               </tr>
+               {customer.auditLogs.length === 0 ? (
+                 <tr><td colSpan={5} className="py-12 text-center text-on-surface-variant font-bold">No audit logs found.</td></tr>
+               ) : (
+                 customer.auditLogs.map((log) => (
+                   <tr key={log.id} className="hover:bg-surface transition-colors">
+                      <td className="px-6 py-4 text-xs text-on-surface-variant font-mono">{new Date(log.createdAt).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-medium text-tertiary">{log.changedBy?.name || 'Admin'}</td>
+                      <td className="px-6 py-4">{log.field}</td>
+                      <td className="px-6 py-4 text-error font-medium line-through">{log.oldValue}</td>
+                      <td className="px-6 py-4 text-accent font-bold">{log.newValue}</td>
+                   </tr>
+                 ))
+               )}
             </tbody>
           </table>
         </div>
@@ -237,7 +298,7 @@ export default function CustomerDetailPage() {
                 <input key={i} type="text" maxLength={1} className="w-12 h-14 bg-surface-container-high rounded-lg text-center text-xl font-bold text-tertiary focus:ring-2 focus:ring-accent outline-none border-none" />
               ))}
             </div>
-            <button className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-[#00401d] transition-colors shadow-lg">Verify & Edit</button>
+            <button onClick={() => setShowOtpModal(false)} className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-[#00401d] transition-colors shadow-lg">Verify & Edit</button>
           </div>
         </div>
       )}

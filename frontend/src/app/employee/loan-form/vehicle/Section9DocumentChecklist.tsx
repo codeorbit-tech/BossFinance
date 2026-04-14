@@ -31,11 +31,25 @@ const PRE_SANCTION_DOCS: { key: keyof VehicleLoanFormData['preSanctionDocs']; la
   { key: 'othersText', label: 'Others', isText: true },
 ];
 
+// Document type options (mutually exclusive - radio buttons)
+const PRE_SANCTION_DOC_TYPES: { key: keyof VehicleLoanFormData['preSanctionDocs']; label: string }[] = [
+  { key: 'proformaInvoice', label: 'Proforma Invoice & Margin Money receipt for new asset' },
+  { key: 'saleDeedUsed', label: 'Sale deed for used asset' },
+  { key: 'rcUsedAsset', label: 'RC for used asset / Original invoice for unregistrable asset' },
+];
+
 const POST_DISBURSE_DOCS: { key: keyof VehicleLoanFormData['postDisbursementDocs']; label: string; isText?: boolean }[] = [
   { key: 'originalInvoiceNew', label: 'Original invoice for new asset with hypothecation in favour of Company' },
   { key: 'rcHypothecation', label: 'Registration Certificate and hypothecation in favour of Company' },
   { key: 'insuranceHypothecation', label: 'Insurance policy hypothecation in favour of Company' },
   { key: 'othersText', label: 'Others', isText: true },
+];
+
+// Document type options (mutually exclusive - radio buttons)
+const POST_DISBURSE_DOC_TYPES: { key: keyof VehicleLoanFormData['postDisbursementDocs']; label: string }[] = [
+  { key: 'originalInvoiceNew', label: 'Original invoice for new asset with hypothecation' },
+  { key: 'rcHypothecation', label: 'Registration Certificate with hypothecation' },
+  { key: 'insuranceHypothecation', label: 'Insurance policy with hypothecation' },
 ];
 
 function KycCheckCell({
@@ -74,6 +88,34 @@ function KycCheckCell({
   );
 }
 
+function SimpleRadio({
+  checked,
+  onChange,
+  label,
+  name
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  name: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer group py-3 border-b border-outline-variant/10 last:border-0">
+      <div
+        onClick={() => onChange(true)}
+        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5 transition-all ${
+          checked ? 'bg-accent border-accent' : 'border-outline-variant group-hover:border-accent/60'
+        }`}
+      >
+        {checked && (
+          <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1", fontSize: '10px' }}>check</span>
+        )}
+      </div>
+      <span className="text-sm text-on-surface leading-relaxed">{label}</span>
+    </label>
+  );
+}
+
 function SimpleCheckbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="flex items-start gap-3 cursor-pointer group py-3 border-b border-outline-variant/10 last:border-0">
@@ -108,6 +150,27 @@ export default function Section9DocumentChecklist({ formData, updateFormData }: 
 
   const updatePostDisburse = (updates: Partial<VehicleLoanFormData['postDisbursementDocs']>) => {
     updateFormData({ postDisbursementDocs: { ...formData.postDisbursementDocs, ...updates } });
+  };
+
+  // Handle mutually exclusive document type selection
+  const selectPreSanctionDocType = (selectedKey: keyof VehicleLoanFormData['preSanctionDocs']) => {
+    const cleared: any = {
+      proformaInvoice: false,
+      saleDeedUsed: false,
+      rcUsedAsset: false,
+    };
+    cleared[selectedKey] = true;
+    updatePreSanction(cleared);
+  };
+
+  const selectPostDisburseDocType = (selectedKey: keyof VehicleLoanFormData['postDisbursementDocs']) => {
+    const cleared: any = {
+      originalInvoiceNew: false,
+      rcHypothecation: false,
+      insuranceHypothecation: false,
+    };
+    cleared[selectedKey] = true;
+    updatePostDisburse(cleared);
   };
 
   const kycVerifiedCount = Object.values(formData.kycDocuments).filter(
@@ -208,27 +271,51 @@ export default function Section9DocumentChecklist({ formData, updateFormData }: 
           Pre-Sanction Documents
         </h4>
         <div className="bg-surface-container/50 rounded-xl border border-outline-variant/20 px-5 py-2">
-          {PRE_SANCTION_DOCS.map(doc =>
-            doc.isText ? (
-              <div key={doc.key} className="py-3 border-b border-outline-variant/10 last:border-0">
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">{doc.label}</label>
-                <input
-                  type="text"
-                  value={formData.preSanctionDocs.othersText}
-                  onChange={e => updatePreSanction({ othersText: e.target.value })}
-                  placeholder="Specify other documents..."
-                  className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all"
-                />
-              </div>
-            ) : (
+          {/* Mutually exclusive document type selection */}
+          <div className="pb-3 border-b border-outline-variant/10 mb-3">
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
+              Select Primary Document Type (choose one)
+            </p>
+            {PRE_SANCTION_DOC_TYPES.map(doc => (
+              <SimpleRadio
+                key={doc.key}
+                name="preSanctionDocType"
+                checked={formData.preSanctionDocs[doc.key] as boolean}
+                onChange={() => selectPreSanctionDocType(doc.key)}
+                label={doc.label}
+              />
+            ))}
+          </div>
+          {/* Additional documents (checkboxes - can select multiple) */}
+          <div className="pb-3 border-b border-outline-variant/10 mb-3">
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
+              Additional Documents (optional)
+            </p>
+            {[
+              { key: 'insurance', label: 'Comprehensive Insurance Policy' },
+              { key: 'bankStatement', label: 'Bank statement of last 6 months' },
+              { key: 'itr', label: 'Last 2 years ITR (if income assessee)' },
+              { key: 'nonIndividualDoc', label: "Non-individual entity's relevant document (if Non-individual)" },
+            ].map(doc => (
               <SimpleCheckbox
                 key={doc.key}
                 checked={formData.preSanctionDocs[doc.key as keyof Omit<VehicleLoanFormData['preSanctionDocs'], 'othersText'>] as boolean}
                 onChange={v => updatePreSanction({ [doc.key]: v })}
                 label={doc.label}
               />
-            )
-          )}
+            ))}
+          </div>
+          {/* Others text field */}
+          <div>
+            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Others</label>
+            <input
+              type="text"
+              value={formData.preSanctionDocs.othersText}
+              onChange={e => updatePreSanction({ othersText: e.target.value })}
+              placeholder="Specify other documents..."
+              className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all"
+            />
+          </div>
         </div>
       </div>
 
@@ -239,27 +326,32 @@ export default function Section9DocumentChecklist({ formData, updateFormData }: 
           Post-Disbursement Documents
         </h4>
         <div className="bg-surface-container/50 rounded-xl border border-outline-variant/20 px-5 py-2">
-          {POST_DISBURSE_DOCS.map(doc =>
-            doc.isText ? (
-              <div key={doc.key} className="py-3 border-b border-outline-variant/10 last:border-0">
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">{doc.label}</label>
-                <input
-                  type="text"
-                  value={formData.postDisbursementDocs.othersText}
-                  onChange={e => updatePostDisburse({ othersText: e.target.value })}
-                  placeholder="Specify other documents..."
-                  className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all"
-                />
-              </div>
-            ) : (
-              <SimpleCheckbox
+          {/* Mutually exclusive document type selection */}
+          <div className="pb-3 border-b border-outline-variant/10 mb-3">
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
+              Select Primary Document Type (choose one)
+            </p>
+            {POST_DISBURSE_DOC_TYPES.map(doc => (
+              <SimpleRadio
                 key={doc.key}
-                checked={formData.postDisbursementDocs[doc.key as keyof Omit<VehicleLoanFormData['postDisbursementDocs'], 'othersText'>] as boolean}
-                onChange={v => updatePostDisburse({ [doc.key]: v })}
+                name="postDisburseDocType"
+                checked={formData.postDisbursementDocs[doc.key] as boolean}
+                onChange={() => selectPostDisburseDocType(doc.key)}
                 label={doc.label}
               />
-            )
-          )}
+            ))}
+          </div>
+          {/* Others text field */}
+          <div>
+            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Others</label>
+            <input
+              type="text"
+              value={formData.postDisbursementDocs.othersText}
+              onChange={e => updatePostDisburse({ othersText: e.target.value })}
+              placeholder="Specify other documents..."
+              className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all"
+            />
+          </div>
         </div>
       </div>
 

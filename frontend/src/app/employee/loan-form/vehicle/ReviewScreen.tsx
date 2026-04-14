@@ -11,6 +11,8 @@ interface Props {
   onBack: () => void;
   onSubmit: () => void;
   submitting: boolean;
+  isResubmit?: boolean;
+  queryDescription?: string | null;
 }
 
 function SectionReviewCard({
@@ -55,7 +57,7 @@ function PartyChip({ label, color }: { label: string; color: string }) {
   return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white uppercase tracking-wide ${color}`}>{label}</span>;
 }
 
-export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmit, submitting }: Props) {
+export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmit, submitting, isResubmit, queryDescription }: Props) {
   const photoCount = [photos.frontView, photos.leftSideView, photos.rightSideView, photos.backView].filter(Boolean).length
     + photos.others.filter(Boolean).length;
 
@@ -73,14 +75,33 @@ export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmi
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
+      {/* Admin Query Banner */}
+      {isResubmit && queryDescription && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <span className="material-symbols-outlined text-amber-500 text-xl mt-0.5">warning</span>
+          <div>
+            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1">Admin Query — Please Fix & Resubmit</p>
+            <p className="text-sm text-amber-900 italic">{queryDescription}</p>
+          </div>
+        </div>
+      )}
+
       {/* Review Header */}
       <div className="text-center py-4">
-        <div className="w-16 h-16 rounded-full bg-accent/10 border-2 border-accent/30 flex items-center justify-center mx-auto mb-3">
-          <span className="material-symbols-outlined text-accent text-3xl">preview</span>
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${
+          isResubmit ? 'bg-amber-100 border-2 border-amber-300' : 'bg-accent/10 border-2 border-accent/30'
+        }`}>
+          <span className={`material-symbols-outlined text-3xl ${isResubmit ? 'text-amber-500' : 'text-accent'}`}>
+            {isResubmit ? 'rate_review' : 'preview'}
+          </span>
         </div>
-        <h3 className="text-xl font-extrabold font-[var(--font-headline)] text-on-surface">Review Application</h3>
+        <h3 className="text-xl font-extrabold font-[var(--font-headline)] text-on-surface">
+          {isResubmit ? 'Fix & Resubmit Application' : 'Review Application'}
+        </h3>
         <p className="text-sm text-on-surface-variant mt-1">
-          Please review all sections carefully before submitting.
+          {isResubmit
+            ? 'Edit the sections that need to be fixed, then resubmit the application.'
+            : 'Please review all sections carefully before submitting.'}
         </p>
       </div>
 
@@ -136,8 +157,8 @@ export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmi
                   {[data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ') || '—'}
                 </p>
                 <p className="text-xs text-on-surface-variant">{data.gender || '—'} &bull; {data.dob || '—'}</p>
-                {data.religion.length > 0 && (
-                  <p className="text-[10px] text-on-surface-variant">Religion: {data.religion.join(', ')}</p>
+                {data.religion && (
+                  <p className="text-[10px] text-on-surface-variant">Religion: {data.religion}{data.religionOther && ` (${data.religionOther})`}</p>
                 )}
               </div>
             </div>
@@ -243,6 +264,12 @@ export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmi
 
       {/* Section 8 */}
       <SectionReviewCard sectionNo={8} title="Vehicle Photos" icon="photo_camera" onEdit={() => onEdit(8)}>
+        {isResubmit && photoCount === 0 && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-700">
+            <span className="material-symbols-outlined text-base">info</span>
+            <p className="text-xs font-medium">Please re-upload all vehicle photos. (For security, photos are not stored on the server for queried applications)</p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {[
             { label: 'Front', file: photos.frontView },
@@ -297,12 +324,16 @@ export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmi
           type="button"
           onClick={onSubmit}
           disabled={submitting}
-          className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-accent to-on-primary-container text-white font-bold text-sm hover:opacity-90 transition-all shadow-xl shadow-accent/20 disabled:opacity-50 active:scale-95"
+          className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-xl disabled:opacity-50 active:scale-95 ${
+            isResubmit
+              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-200'
+              : 'bg-gradient-to-r from-accent to-on-primary-container text-white shadow-accent/20'
+          }`}
         >
           <span className="material-symbols-outlined text-lg">
-            {submitting ? 'progress_activity' : 'send'}
+            {submitting ? 'progress_activity' : isResubmit ? 'replay' : 'send'}
           </span>
-          {submitting ? 'Submitting...' : 'Confirm &amp; Submit Application'}
+          {submitting ? (isResubmit ? 'Resubmitting...' : 'Submitting...') : isResubmit ? 'Resubmit Application' : 'Confirm & Submit Application'}
         </button>
       </div>
     </div>

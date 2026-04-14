@@ -218,14 +218,14 @@ function drawSection2(doc: Doc, y: number, data: VehicleLoanFormData): number {
     fullName(data.guarantorPersonal.motherFirstName, data.guarantorPersonal.motherMiddleName, data.guarantorPersonal.motherLastName),
   );
   y = triRow(doc, y, 'Religion',
-    val(data.applicantPersonal.religion.join(', ') || data.applicantPersonal.religionOther),
-    val(data.coApplicantPersonal.religion.join(', ') || data.coApplicantPersonal.religionOther),
-    val(data.guarantorPersonal.religion.join(', ') || data.guarantorPersonal.religionOther),
+    val(data.applicantPersonal.religion === 'Others' ? data.applicantPersonal.religionOther : data.applicantPersonal.religion),
+    val(data.coApplicantPersonal.religion === 'Others' ? data.coApplicantPersonal.religionOther : data.coApplicantPersonal.religion),
+    val(data.guarantorPersonal.religion === 'Others' ? data.guarantorPersonal.religionOther : data.guarantorPersonal.religion),
   );
   y = triRow(doc, y, 'Category',
-    val(data.applicantPersonal.category.join(', ') || data.applicantPersonal.categoryOther),
-    val(data.coApplicantPersonal.category.join(', ') || data.coApplicantPersonal.categoryOther),
-    val(data.guarantorPersonal.category.join(', ') || data.guarantorPersonal.categoryOther),
+    val(data.applicantPersonal.category === 'Others' ? data.applicantPersonal.categoryOther : data.applicantPersonal.category),
+    val(data.coApplicantPersonal.category === 'Others' ? data.coApplicantPersonal.categoryOther : data.coApplicantPersonal.category),
+    val(data.guarantorPersonal.category === 'Others' ? data.guarantorPersonal.categoryOther : data.guarantorPersonal.category),
   );
   y = triRow(doc, y, 'Preferred Language',
     val(data.applicantPersonal.preferredLanguage === 'Others' ? data.applicantPersonal.preferredLanguageOther : data.applicantPersonal.preferredLanguage),
@@ -580,7 +580,7 @@ export async function generateVehicleLoanPDF(
   formData: VehicleLoanFormData,
   photos: PhotoUploads,
   employeeName?: string
-): Promise<void> {
+): Promise<{ blob: Blob; url: string; fileName: string }> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   let y = drawCoverHeader(doc, formData);
@@ -599,5 +599,8 @@ export async function generateVehicleLoanPDF(
   addFooters(doc);
 
   const fileName = `VehicleLoan_${formData.applicationFormNo}_${formData.applicationDate.replace(/-/g, '')}.pdf`;
-  doc.save(fileName);
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  
+  return { blob, url, fileName };
 }

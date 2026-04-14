@@ -16,6 +16,7 @@ const adminNav = [
   { href: '/admin/customers', icon: 'group', label: 'Customers' },
   { href: '/admin/loan-applications', icon: 'description', label: 'Loan Applications' },
   { href: '/admin/repayments', icon: 'payments', label: 'Repayment Tracker' },
+  { href: '/admin/expense-tracker', icon: 'receipt_long', label: 'Expense Tracker' },
   { href: '/admin/notifications', icon: 'notifications', label: 'Notifications' },
   { href: '/admin/settings', icon: 'settings', label: 'Settings' },
 ];

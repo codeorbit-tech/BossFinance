@@ -28,9 +28,9 @@ export interface PartyPersonalDetails {
   motherFirstName: string;
   motherMiddleName: string;
   motherLastName: string;
-  religion: Religion[];
+  religion: Religion | '';
   religionOther: string;
-  category: Category[];
+  category: Category | '';
   categoryOther: string;
   preferredLanguage: string;
   preferredLanguageOther: string;
@@ -205,8 +205,8 @@ export const emptyPersonal = (): PartyPersonalDetails => ({
   gender: '', dob: '',
   fatherFirstName: '', fatherMiddleName: '', fatherLastName: '',
   motherFirstName: '', motherMiddleName: '', motherLastName: '',
-  religion: [], religionOther: '',
-  category: [], categoryOther: '',
+  religion: '', religionOther: '',
+  category: '', categoryOther: '',
   preferredLanguage: 'English', preferredLanguageOther: '',
 });
 

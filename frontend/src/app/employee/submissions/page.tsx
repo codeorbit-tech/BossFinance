@@ -1,20 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StatusBadge from '@/components/StatusBadge';
 import Pagination from '@/components/Pagination';
 import { EmptyState } from '@/components/Skeletons';
+import { loansApi } from '@/lib/api';
+import { toast } from 'react-hot-toast';
 
-const MOCK_SUBMISSIONS = [
-  { id: '1', customer: 'Arjun Mehta', customerId: 'BF-2024-001', loanType: 'PERSONAL', amount: '₹5,00,000', date: '15 Oct 2023', status: 'ACTIVE' },
-  { id: '2', customer: 'Priya Sharma', customerId: 'BF-2023-842', loanType: 'HOME', amount: '₹12,50,000', date: '10 Sep 2023', status: 'ACTIVE' },
-  { id: '3', customer: 'Karan Patel', customerId: 'BF-2024-033', loanType: 'BUSINESS', amount: '₹15,00,000', date: '02 Apr 2024', status: 'PENDING' },
-  { id: '4', customer: 'Meera Joshi', customerId: 'BF-2024-022', loanType: 'HOME', amount: '₹35,00,000', date: '28 Mar 2024', status: 'ACTIVE' },
-  { id: '5', customer: 'Vikram Singh', customerId: 'BF-2024-009', loanType: 'BUSINESS', amount: '₹8,20,000', date: '20 Mar 2024', status: 'REJECTED' },
-];
+interface Submission {
+  id: string;
+  customer: {
+    customerId: string;
+    name: string;
+  };
+  loanType: string;
+  amount: number;
+  createdAt: string;
+  status: string;
+  queryDescription?: string;
+}
 
 export default function SubmissionsPage() {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      setIsLoading(true);
+      try {
+        const res = await loansApi.list({ page: page.toString(), limit: '10' });
+        setSubmissions(res.data.loans);
+        setTotalPages(res.data.totalPages);
+      } catch {
+        toast.error('Failed to fetch submissions');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSubmissions();
+  }, [page]);
 
   return (
     <div>
@@ -23,7 +49,9 @@ export default function SubmissionsPage() {
         <p className="text-on-surface-variant text-sm">Track the status of loan applications you have submitted.</p>
       </div>
 
-      {MOCK_SUBMISSIONS.length === 0 ? (
+      {isLoading ? (
+        <div className="p-12 text-center text-on-surface-variant font-bold animate-pulse">Loading submissions...</div>
+      ) : submissions.length === 0 ? (
         <EmptyState
           icon="description"
           title="No Submissions Yet"
@@ -43,24 +71,41 @@ export default function SubmissionsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container text-sm">
-                {MOCK_SUBMISSIONS.map((s) => (
+                {submissions.map((s) => (
                   <tr key={s.id} className="hover:bg-surface transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="font-bold text-tertiary">{s.customer}</span>
-                        <span className="text-xs text-on-surface-variant">{s.customerId}</span>
+                        <span className="font-bold text-tertiary">{s.customer.name}</span>
+                        <span className="text-xs text-on-surface-variant">{s.customer.customerId}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-on-surface-variant capitalize">{s.loanType.toLowerCase()}</td>
-                    <td className="px-6 py-5 text-right font-medium">{s.amount}</td>
-                    <td className="px-6 py-5 text-xs text-on-surface-variant">{s.date}</td>
-                    <td className="px-6 py-5"><StatusBadge status={s.status} /></td>
+                    <td className="px-6 py-5 text-right font-medium">₹{s.amount.toLocaleString()}</td>
+                    <td className="px-6 py-5 text-xs text-on-surface-variant">
+                      <p>{new Date(s.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] opacity-70">{new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <StatusBadge status={s.status} />
+                      {s.status === 'QUERIED' && (
+                        <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg max-w-[250px]">
+                          <p className="text-[10px] font-bold text-blue-800 uppercase mb-1">Admin Query:</p>
+                          <p className="text-xs text-blue-700 italic mb-3">“{s.queryDescription}”</p>
+                          <a href={`/employee/loan-form/vehicle?editId=${s.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors">
+                            <span className="material-symbols-outlined text-[14px]">edit</span>
+                            Fix Application Form
+                          </a>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <Pagination page={page} totalPages={1} onPageChange={setPage} />
+          {totalPages > 1 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          )}
         </div>
       )}
     </div>

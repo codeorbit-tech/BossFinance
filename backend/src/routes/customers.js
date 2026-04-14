@@ -27,7 +27,7 @@ router.get('/', authenticate, async (req, res) => {
         skip,
         take: parseInt(limit),
         orderBy: { createdAt: 'desc' },
-        include: { loans: { select: { loanType: true, amount: true, emi: true, status: true, nextDueDate: true } } },
+        include: { loans: { select: { loanType: true, amount: true, emi: true, status: true, nextDueDate: true, frequency: true } } },
       }),
       prisma.customer.count({ where }),
     ]);
@@ -89,25 +89,46 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/customers/:id — update customer (admin only, requires OTP in real flow)
-router.put('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
+// PUT /api/customers/:id — update customer (accessible to both admin and employee to fix queries)
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const existing = await prisma.customer.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Customer not found.' });
 
-    const updates = req.body;
+    const updates = { ...req.body };
+    
+    // Convert dateOfBirth if provided as string
+    if (updates.dateOfBirth) {
+      const d = new Date(updates.dateOfBirth);
+      if (!isNaN(d.getTime())) {
+        updates.dateOfBirth = d;
+      } else {
+        delete updates.dateOfBirth; // Remove invalid date
+      }
+    }
+
     const auditEntries = [];
 
     // Create audit trail for each changed field
     for (const [field, newValue] of Object.entries(updates)) {
-      if (existing[field] !== undefined && String(existing[field]) !== String(newValue)) {
-        auditEntries.push({
-          customerId: req.params.id,
-          field,
-          oldValue: String(existing[field] || ''),
-          newValue: String(newValue),
-          changedById: req.user.id,
-        });
+      // Only audit fields that exist in the customer model
+      if (existing.hasOwnProperty(field)) {
+        let oldVal = existing[field];
+        let newVal = newValue;
+
+        // Normalize for comparison
+        if (oldVal instanceof Date) oldVal = oldVal.toISOString().split('T')[0];
+        if (newVal instanceof Date) newVal = newVal.toISOString().split('T')[0];
+
+        if (String(oldVal || '') !== String(newVal || '')) {
+          auditEntries.push({
+            customerId: req.params.id,
+            field,
+            oldValue: String(oldVal || ''),
+            newValue: String(newVal || ''),
+            changedById: req.user.id,
+          });
+        }
       }
     }
 
@@ -121,6 +142,30 @@ router.put('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
     res.json({ customer, auditEntries: auditEntries.length });
   } catch (err) {
     console.error('Update customer error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// PATCH /api/customers/:id/npa — mark customer as NPA
+router.patch('/:id/npa', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    const customer = await prisma.customer.update({
+      where: { id: req.params.id },
+      data: { status: 'NPA' },
+    });
+
+    // Mark all active/overdue loans as NPA
+    await prisma.loan.updateMany({
+      where: { 
+        customerId: req.params.id,
+        status: { in: ['ACTIVE', 'OVERDUE'] }
+      },
+      data: { status: 'NPA' },
+    });
+
+    res.json({ message: 'Customer and associated loans marked as NPA.', customer });
+  } catch (err) {
+    console.error('Mark NPA error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

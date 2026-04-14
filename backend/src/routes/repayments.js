@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { calculateNextDueDate } = require('../utils/holiday');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -47,12 +48,12 @@ router.get('/', authenticate, async (req, res) => {
     // Compute repayment summary for each loan
     const repaymentData = await Promise.all(
       loans.map(async (loan) => {
-        const totalPaid = await prisma.repayment.aggregate({
+        const totalPaidRes = await prisma.repayment.aggregate({
           where: { loanId: loan.id },
           _sum: { amount: true },
         });
 
-        const paid = totalPaid._sum.amount || 0;
+        const paid = totalPaidRes._sum.amount || 0;
         const outstanding = loan.amount - paid;
         const isOverdue = loan.nextDueDate && loan.nextDueDate < today;
         const isDueToday = loan.nextDueDate && loan.nextDueDate >= today && loan.nextDueDate < new Date(today.getTime() + 86400000);
@@ -88,27 +89,37 @@ router.get('/', authenticate, async (req, res) => {
 // POST /api/repayments — record a payment
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { loanId, amount, method, reference } = req.body;
+    const { loanId, amount, method, reference, paymentType } = req.body;
 
-    const loan = await prisma.loan.findUnique({ where: { id: loanId } });
+    const loan = await prisma.loan.findUnique({ 
+      where: { id: loanId },
+      include: { customer: true } 
+    });
     if (!loan) return res.status(404).json({ error: 'Loan not found.' });
 
     const repayment = await prisma.repayment.create({
       data: {
         loanId,
+        customerId: loan.customerId,
         amount: parseFloat(amount),
         method: method || 'CASH',
-        reference,
+        transactionId: reference,
+        paymentType: paymentType || 'EMI',
         paidAt: new Date(),
+        status: 'SUCCESS'
       },
     });
 
-    // Update next due date based on frequency
-    const frequencyDays = { DAILY: 1, WEEKLY: 7, MONTHLY: 30 };
-    const days = frequencyDays[loan.frequency] || 30;
+    // Calculate and update next due date
+    const nextDueDate = await calculateNextDueDate(loan.nextDueDate || loan.disbursedAt || new Date(), loan.frequency);
+    
     await prisma.loan.update({
       where: { id: loanId },
-      data: { nextDueDate: new Date(Date.now() + days * 86400000) },
+      data: { 
+        nextDueDate,
+        totalPaid: { increment: parseFloat(amount) },
+        currentBalance: { decrement: parseFloat(amount) }
+      },
     });
 
     res.status(201).json({ repayment });
