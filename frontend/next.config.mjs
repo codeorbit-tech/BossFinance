@@ -3,6 +3,14 @@ const nextConfig = {
   devIndicators: {
     buildActivity: false,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://boss-finance-backend.onrender.com/api/:path*'
+      }
+    ]
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
