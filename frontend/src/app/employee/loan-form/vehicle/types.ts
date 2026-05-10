@@ -104,6 +104,14 @@ export interface ImmovableProperty {
   declaredValue: string;
 }
 
+// ─── Loan Details ───
+export interface LoanDetails {
+  loanAmount: string;
+  tenure: string;
+  interestRate: string;
+  emi: string;
+}
+
 // ─── KYC Document Entry ───
 export interface KycDocEntry {
   applicantChecked: boolean;
@@ -129,6 +137,9 @@ export interface VehicleLoanFormData {
   coApplicantGstin: string;
   guarantorCkycId: string;
   guarantorGstin: string;
+
+  // Loan Details
+  loanDetails: LoanDetails;
 
   // Section 2
   applicantPersonal: PartyPersonalDetails;
@@ -192,6 +203,9 @@ export interface VehicleLoanFormData {
 
 // ─── Photo Upload State ───
 export interface PhotoUploads {
+  applicantPhoto: File | null;
+  coApplicantPhoto: File | null;
+  guarantorPhoto: File | null;
   frontView: File | null;
   leftSideView: File | null;
   rightSideView: File | null;
@@ -241,6 +255,10 @@ export const emptyVehicleOwned = (): VehicleOwned => ({
 
 export const emptyImmovable = (): ImmovableProperty => ({
   assetType: '', assetTypeOther: '', builtUpArea: '', landArea: '', declaredValue: '',
+});
+
+export const emptyLoanDetails = (): LoanDetails => ({
+  loanAmount: '', tenure: '', interestRate: '', emi: '',
 });
 
 export const emptyKycDoc = (): KycDocEntry => ({

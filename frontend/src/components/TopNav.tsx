@@ -1,24 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-
-interface User {
-  name: string;
-  role: string;
-}
+import { useStoredUser } from '@/lib/authState';
 
 export default function TopNav() {
-  const [user, setUser] = useState<User | null>(null);
+  const user = useStoredUser();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get('search') || '';
-
-  useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
-  }, []);
 
   const handleSearchChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());

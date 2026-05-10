@@ -12,11 +12,14 @@ router.get('/', authenticate, async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const where = {};
+    if (req.user.role === 'EMPLOYEE') {
+      where.createdById = req.user.id;
+    }
 
     if (search) {
       where.OR = [
-        { customerId: { contains: search, mode: 'insensitive' } },
-        { name: { contains: search, mode: 'insensitive' } },
+        { customerId: { contains: search } },
+        { name: { contains: search } },
       ];
     }
     if (status) where.status = status;
@@ -27,7 +30,7 @@ router.get('/', authenticate, async (req, res) => {
         skip,
         take: parseInt(limit),
         orderBy: { createdAt: 'desc' },
-        include: { loans: { select: { loanType: true, amount: true, emi: true, status: true, nextDueDate: true, frequency: true } } },
+        include: { loans: { select: { id: true, loanType: true, amount: true, emi: true, status: true, nextDueDate: true, frequency: true } } },
       }),
       prisma.customer.count({ where }),
     ]);
@@ -45,11 +48,55 @@ router.get('/:id', authenticate, async (req, res) => {
     const customer = await prisma.customer.findUnique({
       where: { id: req.params.id },
       include: {
-        loans: { include: { repayments: { orderBy: { paidAt: 'desc' } } } },
+        loans: { 
+          include: { 
+            repayments: { orderBy: { paidAt: 'desc' } },
+            installments: { orderBy: { installmentNumber: 'asc' } }
+          } 
+        },
         auditLogs: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
     });
     if (!customer) return res.status(404).json({ error: 'Customer not found.' });
+    if (req.user.role === 'EMPLOYEE' && customer.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    // Accrue penalties on-demand so the profile always shows current data
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (const loan of customer.loans) {
+      for (const inst of loan.installments) {
+        const dueDate = new Date(inst.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate >= today || inst.status === 'PAID') continue;
+
+        const referenceDate = inst.lastPenaltyUpdate
+          ? new Date(inst.lastPenaltyUpdate)
+          : new Date(inst.dueDate);
+        referenceDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.floor((today.getTime() - referenceDate.getTime()) / 86400000);
+        if (diffDays <= 0) continue;
+
+        // Compound 3% daily on (totalRemaining + penalInterest - penaltyPaid)
+        const penaltyRate = 0.03;
+        const currentPrincipal = (inst.totalRemaining || 0) + (inst.penalInterest || 0) - (inst.penaltyPaid || 0);
+        const newPrincipal = currentPrincipal * Math.pow(1 + penaltyRate, diffDays);
+        const addedPenalty = newPrincipal - currentPrincipal;
+        inst.penalInterest = (inst.penalInterest || 0) + addedPenalty;
+        inst.lastPenaltyUpdate = today;
+
+        await prisma.installment.update({
+          where: { id: inst.id },
+          data: {
+            penalInterest: inst.penalInterest,
+            lastPenaltyUpdate: today,
+            status: inst.status === 'UPCOMING' ? 'OVERDUE' : inst.status,
+          },
+        });
+      }
+    }
+
     res.json({ customer });
   } catch (err) {
     console.error('Get customer error:', err);
@@ -67,17 +114,24 @@ router.post('/', authenticate, async (req, res) => {
     const year = new Date().getFullYear();
     const customerId = `BF-${year}-${String(count + 1).padStart(3, '0')}`;
 
+    // Safely parse dateOfBirth — empty string or invalid string must not crash Prisma
+    let parsedDob = null;
+    if (dateOfBirth && typeof dateOfBirth === 'string' && dateOfBirth.trim() !== '') {
+      const d = new Date(dateOfBirth);
+      if (!isNaN(d.getTime())) parsedDob = d;
+    }
+
     const customer = await prisma.customer.create({
       data: {
         customerId,
-        name,
-        phone,
-        email,
-        address,
-        aadhaar,
-        pan,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-        occupation,
+        name: name || 'Unknown',
+        phone:      phone      || null,
+        email:      email      || null,
+        address:    address    || null,
+        aadhaar:    aadhaar    || null,
+        pan:        pan        || null,
+        dateOfBirth: parsedDob,
+        occupation: occupation || null,
         createdById: req.user.id,
       },
     });
@@ -85,25 +139,41 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json({ customer });
   } catch (err) {
     console.error('Create customer error:', err);
-    res.status(500).json({ error: 'Internal server error.' });
+    res.status(500).json({ error: err?.message || 'Internal server error.' });
   }
 });
+
 
 // PUT /api/customers/:id — update customer (accessible to both admin and employee to fix queries)
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const existing = await prisma.customer.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Customer not found.' });
+    if (req.user.role === 'EMPLOYEE' && existing.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
 
     const updates = { ...req.body };
-    
-    // Convert dateOfBirth if provided as string
-    if (updates.dateOfBirth) {
-      const d = new Date(updates.dateOfBirth);
-      if (!isNaN(d.getTime())) {
-        updates.dateOfBirth = d;
+
+    // Sanitize optional string fields: empty string → null
+    const nullableFields = ['phone', 'email', 'aadhaar', 'pan', 'occupation', 'address', 'bankName', 'bankAccount', 'bankIfsc'];
+    for (const f of nullableFields) {
+      if (updates[f] !== undefined && (updates[f] === '' || updates[f] === null)) {
+        updates[f] = null;
+      }
+    }
+
+    // Convert dateOfBirth if provided as string; treat empty string as null
+    if (updates.dateOfBirth !== undefined) {
+      if (!updates.dateOfBirth || updates.dateOfBirth.toString().trim() === '') {
+        delete updates.dateOfBirth;
       } else {
-        delete updates.dateOfBirth; // Remove invalid date
+        const d = new Date(updates.dateOfBirth);
+        if (!isNaN(d.getTime())) {
+          updates.dateOfBirth = d;
+        } else {
+          delete updates.dateOfBirth; // Remove invalid date
+        }
       }
     }
 

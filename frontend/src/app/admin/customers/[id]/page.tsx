@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import StatusBadge from '@/components/StatusBadge';
-import { customersApi } from '@/lib/api';
+import { customersApi, loansApi } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
 interface AuditLog {
@@ -38,6 +38,17 @@ interface Loan {
   guarantorName: string | null;
   guarantorPhone: string | null;
   repayments: Repayment[];
+  installments: {
+    id: string;
+    installmentNumber: number;
+    dueDate: string;
+    expectedAmount: number;
+    amountPaid: number;
+    penalInterest: number;
+    penaltyPaid: number;
+    totalRemaining: number;
+    status: string;
+  }[];
 }
 
 interface Customer {
@@ -63,21 +74,25 @@ export default function CustomerDetailPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'payment-history' | 'audit-trail'>('payment-history');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPreclosureModal, setShowPreclosureModal] = useState(false);
+  const [preclosureQuote, setPreclosureQuote] = useState<{
+    outstandingPrincipal: number;
+    penalties: number;
+    totalPayable: number;
+  } | null>(null);
+  const [preclosureForm, setPreclosureForm] = useState({
+    method: 'CASH',
+    reference: ''
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const fetchCustomer = async () => {
-      setIsLoading(true);
-      try {
-        const res = await customersApi.get(id);
-        setCustomer(res.data.customer);
-      } catch {
-        toast.error('Failed to fetch customer details');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchCustomer();
+    fetchCustomerData();
+
+    // Polling every 60s for real-time status/balance updates
+    const interval = setInterval(fetchCustomerData, 60000);
+    return () => clearInterval(interval);
   }, [id]);
 
   const handleMarkNpa = async () => {
@@ -85,11 +100,52 @@ export default function CustomerDetailPage() {
     try {
       await customersApi.markNpa(id);
       toast.success('Customer marked as NPA');
-      // Re-fetch
+      fetchCustomerData();
+    } catch {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const fetchCustomerData = async () => {
+    try {
       const res = await customersApi.get(id);
       setCustomer(res.data.customer);
     } catch {
-      toast.error('Failed to update status');
+      // Background refresh fail is silent
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenPreclosure = async () => {
+    if (!activeLoan) return;
+    try {
+      const res = await loansApi.getPreclosureQuote(activeLoan.id);
+      setPreclosureQuote(res.data.quote);
+      setShowPreclosureModal(true);
+    } catch {
+      toast.error('Failed to fetch preclosure quote');
+    }
+  };
+
+  const handleExecutePreclosure = async () => {
+    if (!activeLoan || !preclosureQuote) return;
+    if (!confirm(`Are you absolutely sure you want to CLOSE this loan for ₹${preclosureQuote.totalPayable.toLocaleString()}? This action is irreversible.`)) return;
+
+    setIsProcessing(true);
+    try {
+      await loansApi.precloseLoan(activeLoan.id, {
+        amount: preclosureQuote.totalPayable,
+        method: preclosureForm.method,
+        reference: preclosureForm.reference
+      });
+      toast.success('Loan pre-closed successfully');
+      setShowPreclosureModal(false);
+      fetchCustomerData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to pre-close loan');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -97,6 +153,19 @@ export default function CustomerDetailPage() {
   if (!customer) return <div className="p-12 text-center text-on-surface-variant font-bold">Customer not found.</div>;
 
   const activeLoan = customer.loans[0];
+
+  const calculateDebt = () => {
+    if (!activeLoan) return { unpaid: 0, penalty: 0 };
+    const unpaid = activeLoan.installments
+      .filter(i => i.status !== 'PAID')
+      .reduce((sum, i) => sum + i.totalRemaining, 0);
+    const penalty = activeLoan.installments
+      .filter(i => i.status !== 'PAID')
+      .reduce((sum, i) => sum + Math.max(0, (i.penalInterest || 0) - (i.penaltyPaid || 0)), 0);
+    return { unpaid, penalty };
+  };
+
+  const debt = calculateDebt();
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -115,7 +184,10 @@ export default function CustomerDetailPage() {
           </div>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => setShowOtpModal(true)} className="px-4 py-2 bg-surface-container-high text-tertiary font-bold text-sm rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+          <button 
+            disabled // Placeholder for now, but lock removed
+            className="px-4 py-2 bg-surface-container-high text-tertiary font-bold text-sm rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-2 opacity-50 cursor-not-allowed"
+          >
             <span className="material-symbols-outlined text-sm">edit</span>
             Edit Details
           </button>
@@ -194,9 +266,17 @@ export default function CustomerDetailPage() {
                   </tbody>
                 </table>
                 
-                <div className="border-t-2 border-outline-variant/20 pt-4 flex justify-between font-bold text-tertiary">
-                  <span>Total Paid: ₹{activeLoan.totalPaid.toLocaleString()}</span>
-                  <span>Outstanding: ₹{(activeLoan.amount - activeLoan.totalPaid).toLocaleString()}</span>
+                <div className="border-t-2 border-outline-variant/20 pt-4 space-y-2">
+                  <div className="flex justify-between font-bold text-tertiary">
+                    <span>Total Principal Paid: ₹{activeLoan.totalPaid.toLocaleString()}</span>
+                    <span>Remaining Principal: ₹{(activeLoan.amount - activeLoan.totalPaid).toLocaleString()}</span>
+                  </div>
+                  {(debt.unpaid > 0 || debt.penalty > 0) && (
+                    <div className="pt-2 border-t border-dashed border-outline-variant/30 flex justify-between font-bold text-error">
+                      <span>Total Unpaid EMIs: ₹{debt.unpaid.toLocaleString()}</span>
+                      <span>Accumulated Penalty: ₹{debt.penalty.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -204,7 +284,16 @@ export default function CustomerDetailPage() {
             )}
           </div>
           
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+             {activeLoan && activeLoan.status === 'ACTIVE' && (
+               <button 
+                 onClick={handleOpenPreclosure}
+                 className="px-6 py-3 bg-red-600/10 text-red-600 border border-red-600/20 font-bold rounded-lg flex items-center gap-2 hover:bg-red-600/20 transition-colors"
+               >
+                 <span className="material-symbols-outlined">running_with_errors</span>
+                 Pre-close Loan
+               </button>
+             )}
              <button className="px-6 py-3 bg-gradient-to-r from-accent to-on-primary-container text-white font-bold rounded-lg flex items-center gap-2 hover:opacity-90 shadow-lg shadow-accent/20">
               <span className="material-symbols-outlined">account_balance_wallet</span>
               Record Extraneous Payment
@@ -229,7 +318,26 @@ export default function CustomerDetailPage() {
             <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2">Financial Profile</h3>
             <div className="space-y-4">
               <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Bank Information</span><span className="font-bold text-sm text-tertiary">{customer.bankName || '—'} - A/c: {customer.bankAccount || '—'}</span><span className="text-xs text-on-surface-variant mt-0.5">IFSC: {customer.bankIfsc || '—'}</span></div>
-              <div className="flex flex-col mt-6"><span className="text-xs text-on-surface-variant mb-0.5">Collateral Locked</span><span className="font-bold text-sm text-tertiary bg-warning/10 p-2 rounded-md">{activeLoan?.collateralDetails || 'None'}</span></div>
+              
+              {customer.status === 'NPA' || debt.unpaid > 0 ? (
+                <div className="p-3 bg-error/5 border border-error/10 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-error font-bold uppercase">NPA Amount</span>
+                    <span className="text-error font-extrabold text-sm font-mono">₹{debt.unpaid.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-error font-bold uppercase">Accrued Penalty</span>
+                    <span className="text-error font-extrabold text-sm font-mono">₹{debt.penalty.toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-accent/5 border border-accent/10 rounded-xl flex items-center gap-2">
+                  <span className="material-symbols-outlined text-accent text-sm">verified</span>
+                  <span className="text-xs text-accent font-bold">Account in Good Standing</span>
+                </div>
+              )}
+
+              <div className="flex flex-col mt-4"><span className="text-xs text-on-surface-variant mb-0.5">Collateral Locked</span><span className="font-bold text-sm text-tertiary bg-warning/5 p-2 rounded-md">{activeLoan?.collateralDetails || 'None'}</span></div>
               <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Guarantor</span><span className="font-bold text-sm text-tertiary">{activeLoan?.guarantorName ? `${activeLoan.guarantorName} (${activeLoan.guarantorPhone})` : '—'}</span></div>
             </div>
           </div>
@@ -279,26 +387,96 @@ export default function CustomerDetailPage() {
         </div>
       )}
 
-      {/* OTP Modal */}
-      {showOtpModal && (
+      {/* Preclosure Modal */}
+      {showPreclosureModal && preclosureQuote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-tertiary/80 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-lowest rounded-2xl w-full max-w-md p-8 shadow-2xl relative">
+            <button onClick={() => setShowPreclosureModal(false)} className="absolute top-4 right-4 text-on-surface-variant hover:text-tertiary">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            
+            <div className="text-center mb-6">
+               <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <span className="material-symbols-outlined text-2xl">lock_open</span>
+               </div>
+               <h3 className="text-xl font-bold font-[var(--font-headline)] text-tertiary">Loan Pre-closure</h3>
+               <p className="text-sm text-on-surface-variant mt-2">Settle the full loan balance now to close the application.</p>
+            </div>
+
+            <div className="bg-surface-container-high rounded-xl p-5 mb-6 space-y-3 font-mono">
+              <div className="flex justify-between text-sm">
+                <span className="text-on-surface-variant">Outstanding Principal:</span>
+                <span className="font-bold text-tertiary">₹{preclosureQuote.outstandingPrincipal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-on-surface-variant">Unpaid Penalties:</span>
+                <span className="font-bold text-tertiary text-error">₹{preclosureQuote.penalties.toLocaleString()}</span>
+              </div>
+              <div className="pt-2 border-t border-dashed border-outline-variant flex justify-between font-bold text-base">
+                <span className="text-tertiary">Total Payable:</span>
+                <span className="text-accent underline decoration-accent/30">₹{preclosureQuote.totalPayable.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <div>
+                <label className="text-xs font-bold text-tertiary uppercase mb-1.5 block">Payment Method</label>
+                <select 
+                  value={preclosureForm.method}
+                  onChange={(e) => setPreclosureForm({...preclosureForm, method: e.target.value})}
+                  className="w-full h-11 bg-surface-container-high rounded-lg px-4 text-sm font-bold text-tertiary focus:ring-2 focus:ring-accent outline-none border-none"
+                >
+                  <option value="CASH">CASH</option>
+                  <option value="BANK_TRANSFER">BANK TRANSFER</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-tertiary uppercase mb-1.5 block">Reference (Optional)</label>
+                <input 
+                  type="text"
+                  placeholder="Txn ID / Receipt No"
+                  value={preclosureForm.reference}
+                  onChange={(e) => setPreclosureForm({...preclosureForm, reference: e.target.value})}
+                  className="w-full h-11 bg-surface-container-high rounded-lg px-4 text-sm font-bold text-tertiary placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-accent outline-none border-none" 
+                />
+              </div>
+            </div>
+
+            <button 
+              onClick={handleExecutePreclosure}
+              disabled={isProcessing}
+              className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-lg shadow-red-200 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-sm">done_all</span>
+                  Confirm Pre-closure
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal (Lock Removed per user request) */}
+      {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-tertiary/80 backdrop-blur-sm p-4">
           <div className="bg-surface-container-lowest rounded-2xl w-full max-w-sm p-8 shadow-2xl relative">
-            <button onClick={() => setShowOtpModal(false)} className="absolute top-4 right-4 text-on-surface-variant hover:text-tertiary">
+            <button onClick={() => setShowEditModal(false)} className="absolute top-4 right-4 text-on-surface-variant hover:text-tertiary">
               <span className="material-symbols-outlined">close</span>
             </button>
             <div className="text-center mb-6">
-               <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                 <span className="material-symbols-outlined text-2xl">lock</span>
-               </div>
-               <h3 className="text-xl font-bold font-[var(--font-headline)] text-tertiary">Admin Approval Required</h3>
-               <p className="text-sm text-on-surface-variant mt-2">Enter the OTP sent to Super Admin (+91 88888 77777) to edit core profile data.</p>
+               <h3 className="text-xl font-bold font-[var(--font-headline)] text-tertiary">Edit Profile</h3>
+               <p className="text-sm text-on-surface-variant mt-2">Update customer information directly.</p>
             </div>
-            <div className="flex gap-2 justify-center mb-6">
-              {[1, 2, 3, 4].map(i => (
-                <input key={i} type="text" maxLength={1} className="w-12 h-14 bg-surface-container-high rounded-lg text-center text-xl font-bold text-tertiary focus:ring-2 focus:ring-accent outline-none border-none" />
-              ))}
-            </div>
-            <button onClick={() => setShowOtpModal(false)} className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-[#00401d] transition-colors shadow-lg">Verify & Edit</button>
+            {/* Form fields would go here, currently just removing the OTP gate */}
+            <button onClick={() => setShowEditModal(false)} className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-[#00401d] transition-colors shadow-lg">Save Changes</button>
           </div>
         </div>
       )}

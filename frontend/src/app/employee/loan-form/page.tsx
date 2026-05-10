@@ -1,62 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-const LOAN_TYPES = [
-  {
-    value: 'HOME',
-    label: 'Home Loan',
-    icon: 'home',
-    description: 'Residential & commercial property financing',
-    color: 'from-blue-500/10 to-blue-600/5',
-    activeBorder: 'border-blue-400',
-    activeIcon: 'text-blue-500',
-  },
-  {
-    value: 'VEHICLE',
-    label: 'Vehicle Loan',
-    icon: 'directions_car',
-    description: 'New & used vehicle financing with full application',
-    color: 'from-accent/10 to-on-primary-container/5',
-    activeBorder: 'border-accent',
-    activeIcon: 'text-accent',
-    fullForm: true,
-  },
-  {
-    value: 'PERSONAL',
-    label: 'Personal Loan',
-    icon: 'person',
-    description: 'Unsecured personal financing',
-    color: 'from-purple-500/10 to-purple-600/5',
-    activeBorder: 'border-purple-400',
-    activeIcon: 'text-purple-500',
-  },
-  {
-    value: 'BUSINESS',
-    label: 'Business Loan',
-    icon: 'business',
-    description: 'Business growth & working capital',
-    color: 'from-orange-500/10 to-orange-600/5',
-    activeBorder: 'border-orange-400',
-    activeIcon: 'text-orange-500',
-  },
-  {
-    value: 'DAILY',
-    label: 'Daily Loan',
-    icon: 'today',
-    description: 'Short-term daily repayment loans',
-    color: 'from-pink-500/10 to-pink-600/5',
-    activeBorder: 'border-pink-400',
-    activeIcon: 'text-pink-500',
-  },
+const FREQUENCIES = [
+  { value: 'DAILY', label: 'Daily', icon: 'auto_schedule', description: 'Daily repayment schedule for quick turnover', color: 'from-pink-500/10 to-pink-600/5', activeBorder: 'border-pink-400', activeIcon: 'text-pink-500' },
+  { value: 'WEEKLY', label: 'Weekly', icon: 'event_repeat', description: 'Weekly repayment for small business cashflow', color: 'from-blue-500/10 to-blue-600/5', activeBorder: 'border-blue-400', activeIcon: 'text-blue-500' },
+  { value: 'MONTHLY', label: 'Monthly', icon: 'calendar_month', description: 'Standard monthly EMI for large loans', color: 'from-accent/10 to-on-primary-container/5', activeBorder: 'border-accent', activeIcon: 'text-accent' },
 ];
 
-const FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY'];
+interface LoanOption {
+  value: string;
+  label: string;
+  icon: string;
+  description: string;
+  fullForm?: boolean;
+}
+
+const LOAN_OPTIONS_MAP: Record<string, LoanOption[]> = {
+  MONTHLY: [
+    { value: 'HOME', label: 'Home Loan', icon: 'home', description: 'Property and construction financing', fullForm: true },
+    { value: 'VEHICLE', label: 'Vehicle Loan', icon: 'directions_car', description: 'Car, bike, or transport financing', fullForm: true },
+    { value: 'PERSONAL', label: 'Personal Loan', icon: 'person', description: 'Unsecured personal financing', fullForm: true },
+    { value: 'BUSINESS', label: 'Business Loan', icon: 'business', description: 'Large business growth financing', fullForm: true },
+  ],
+  WEEKLY: [
+    { value: 'SHOP', label: 'Shop Loan', icon: 'shopping_bag', description: 'For employees working in shops', fullForm: true },
+    { value: 'BUSINESS', label: 'Business Loan', icon: 'storefront', description: 'Focus on local business owners', fullForm: true },
+    { value: 'PERSONAL', label: 'Personal Loan', icon: 'person', description: 'Personal financing needs', fullForm: true },
+  ],
+  DAILY: [
+    { value: 'SHOP', label: 'Shop Loan', icon: 'shopping_bag', description: 'For employees working in shops', fullForm: true },
+    { value: 'BUSINESS', label: 'Business Loan', icon: 'storefront', description: 'Focus on local business owners', fullForm: true },
+    { value: 'PERSONAL', label: 'Personal Loan', icon: 'person', description: 'Personal financing needs', fullForm: true },
+  ]
+};
 
 export default function LoanFormPage() {
   const router = useRouter();
+  const [selectedFrequency, setSelectedFrequency] = useState('');
   const [selectedLoanType, setSelectedLoanType] = useState('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [form, setForm] = useState({
@@ -67,32 +50,43 @@ export default function LoanFormPage() {
     purpose: '', guarantorName: '', guarantorPhone: '',
   });
 
-  const [summary, setSummary] = useState({
-    totalInterest: 0,
-    totalRepayment: 0,
-    emiAmount: 0,
-  });
-
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const summary = useMemo(() => {
     const p = parseFloat(form.amount) || 0;
     const t = parseFloat(form.tenure) || 0;
     const r = parseFloat(form.interestRate) || 0;
 
     if (p > 0 && t > 0) {
+      if (form.frequency === 'DAILY' || form.frequency === 'WEEKLY') {
+        const interest = (p * r) / 100;
+        return { 
+          totalInterest: interest, 
+          totalRepayment: p, // Customer only repays principal
+          emiAmount: p / t,
+          disbursedAmount: p - interest 
+        };
+      }
       const interest = (p * r * t) / 100;
       const total = p + interest;
-      const emi = total / t;
-      setSummary({ totalInterest: interest, totalRepayment: total, emiAmount: emi });
-      setForm(prev => ({ ...prev, emi: emi.toFixed(2) }));
-    } else {
-      setSummary({ totalInterest: 0, totalRepayment: 0, emiAmount: 0 });
+      return { 
+        totalInterest: interest, 
+        totalRepayment: total, 
+        emiAmount: total / t,
+        disbursedAmount: p
+      };
     }
+    return { totalInterest: 0, totalRepayment: 0, emiAmount: 0, disbursedAmount: 0 };
   }, [form.amount, form.tenure, form.interestRate, form.frequency]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleFrequencySelect = (value: string) => {
+    setSelectedFrequency(value);
+    setSelectedLoanType('');
+    setForm(prev => ({ ...prev, frequency: value, loanType: '' }));
   };
 
   const handleLoanTypeSelect = (value: string) => {
@@ -100,9 +94,21 @@ export default function LoanFormPage() {
     setForm(prev => ({ ...prev, loanType: value }));
 
     if (value === 'VEHICLE') {
-      // Navigate to the full vehicle loan application form
       router.push('/employee/loan-form/vehicle');
+      return;
     }
+    if (value === 'HOME') {
+      router.push('/employee/loan-form/home');
+      return;
+    }
+
+    if (selectedFrequency === 'MONTHLY' && (value === 'PERSONAL' || value === 'BUSINESS')) {
+      router.push(`/employee/loan-form/monthly?type=${value}`);
+      return;
+    }
+
+    // Redirect to simple form for all other types (Daily, Weekly)
+    router.push(`/employee/loan-form/simple?type=${value}&freq=${selectedFrequency}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,7 +134,7 @@ export default function LoanFormPage() {
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
-  const showBasicForm = selectedLoanType && selectedLoanType !== 'VEHICLE';
+  const showBasicForm = selectedLoanType && selectedLoanType !== 'VEHICLE' && selectedLoanType !== 'HOME';
 
   return (
     <div className="pb-12 pr-0 xl:pr-[360px]">
@@ -144,50 +150,39 @@ export default function LoanFormPage() {
       <div className="flex flex-col xl:flex-row gap-8 items-start">
         <div className="space-y-8 flex-1 w-full">
 
-          {/* Loan Type Selector */}
+          {/* Phase 1: Frequency Selector */}
           <div className="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/10">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-lg">1</div>
-              <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Select Loan Type</h3>
+              <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Select Frequency</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
-              {LOAN_TYPES.map((lt) => {
-                const isSelected = selectedLoanType === lt.value;
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {FREQUENCIES.map((freq) => {
+                const isSelected = selectedFrequency === freq.value;
                 return (
                   <button
-                    key={lt.value}
+                    key={freq.value}
                     type="button"
-                    onClick={() => handleLoanTypeSelect(lt.value)}
-                    className={`relative p-5 rounded-2xl text-left transition-all group border-2 bg-gradient-to-br ${lt.color} ${
+                    onClick={() => handleFrequencySelect(freq.value)}
+                    className={`relative p-6 rounded-2xl text-left transition-all group border-2 bg-gradient-to-br ${freq.color} ${
                       isSelected
-                        ? `${lt.activeBorder} shadow-md`
+                        ? `${freq.activeBorder} shadow-md`
                         : 'border-transparent hover:border-outline-variant/30 bg-surface-container-high'
                     }`}
                   >
-                    {/* Vehicle Loan Badge */}
-                    {lt.fullForm && (
-                      <div className="absolute top-2 right-2">
-                        <span className="bg-accent text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Full Form</span>
-                      </div>
-                    )}
-
-                    <span className={`material-symbols-outlined text-3xl block mb-3 transition-transform ${
-                      isSelected ? lt.activeIcon : 'text-on-surface-variant'
+                    <span className={`material-symbols-outlined text-4xl block mb-3 transition-transform ${
+                      isSelected ? freq.activeIcon : 'text-on-surface-variant'
                     } ${isSelected ? 'scale-110' : 'group-hover:scale-105'}`}>
-                      {lt.icon}
+                      {freq.icon}
                     </span>
-                    <p className={`text-sm font-bold mb-1 ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
-                      {lt.label}
+                    <p className={`text-base font-bold mb-1 ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
+                      {freq.label}
                     </p>
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed">{lt.description}</p>
-
-                    {lt.fullForm && (
-                      <div className={`mt-3 flex items-center gap-1.5 text-[11px] font-bold transition-all ${
-                        isSelected ? 'text-accent' : 'text-on-surface-variant/60'
-                      }`}>
-                        <span className="material-symbols-outlined text-sm">open_in_new</span>
-                        Opens full application form
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed opacity-70">{freq.description}</p>
+                    {isSelected && (
+                      <div className="absolute top-4 right-4 bg-accent text-white rounded-full p-1 leading-none animate-in zoom-in-50 duration-300">
+                        <span className="material-symbols-outlined text-sm">check</span>
                       </div>
                     )}
                   </button>
@@ -195,6 +190,50 @@ export default function LoanFormPage() {
               })}
             </div>
           </div>
+
+          {/* Phase 2: Loan Type Selector (Shows only after frequency is selected) */}
+          {selectedFrequency && (
+            <div className="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/10 animate-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary font-bold text-lg">2</div>
+                <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Select Loan Type</h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(LOAN_OPTIONS_MAP[selectedFrequency] || []).map((lt) => {
+                  const isSelected = selectedLoanType === lt.value;
+                  return (
+                    <button
+                      key={lt.value}
+                      type="button"
+                      onClick={() => handleLoanTypeSelect(lt.value)}
+                      className={`relative p-5 rounded-2xl text-left transition-all group border-2 ${
+                        isSelected
+                          ? `border-accent shadow-md bg-white`
+                          : `border-transparent hover:border-outline-variant/30 bg-surface-container-high`
+                      }`}
+                    >
+                      {lt.fullForm && (
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-accent text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Full Form</span>
+                        </div>
+                      )}
+
+                      <span className={`material-symbols-outlined text-3xl block mb-3 transition-transform ${
+                        isSelected ? 'text-accent' : 'text-on-surface-variant'
+                      } ${isSelected ? 'scale-110' : 'group-hover:scale-105'}`}>
+                        {lt.icon}
+                      </span>
+                      <p className={`text-sm font-bold mb-1 ${isSelected ? 'text-on-surface' : 'text-on-surface-variant'}`}>
+                        {lt.label}
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed opacity-80">{lt.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Basic Loan Form — Only shown for non-vehicle types */}
           {showBasicForm && (
@@ -291,8 +330,10 @@ export default function LoanFormPage() {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Payment Frequency</label>
-                    <select name="frequency" value={form.frequency} onChange={handleChange} className="w-full bg-surface-container-high border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-accent appearance-none">
-                      {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+                    <select name="frequency" value={form.frequency} onChange={handleChange} className="w-full bg-surface-container-high border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-accent appearance-none capitalize">
+                      {FREQUENCIES.map(f => (
+                        <option key={f.value} value={f.value}>{f.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -341,8 +382,14 @@ export default function LoanFormPage() {
                   <p className="text-white text-2xl font-black">{formatCurrency(parseFloat(form.amount) || 0)}</p>
                 </div>
                 <div className="space-y-4">
+                  {(form.frequency === 'DAILY' || form.frequency === 'WEEKLY') && (
+                    <div className="flex justify-between items-end border-b border-white/5 pb-3">
+                      <span className="text-emerald-400/80 text-xs font-bold">Disbursed Amount</span>
+                      <span className="text-emerald-400 font-bold">{formatCurrency(summary.disbursedAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-end border-b border-white/5 pb-3">
-                    <span className="text-white/60 text-xs">Total Interest</span>
+                    <span className="text-white/60 text-xs">{form.frequency === 'DAILY' || form.frequency === 'WEEKLY' ? 'Upfront Interest' : 'Total Interest'}</span>
                     <span className="text-accent font-bold">{formatCurrency(summary.totalInterest)}</span>
                   </div>
                   <div className="flex justify-between items-end border-b border-white/5 pb-3">
@@ -361,7 +408,11 @@ export default function LoanFormPage() {
                 </div>
                 <div className="bg-accent/10 rounded-xl p-4 flex gap-3 items-start border border-accent/20">
                   <span className="material-symbols-outlined text-accent text-lg mt-0.5">info</span>
-                  <p className="text-accent/90 text-[10px] font-medium leading-relaxed">Flat interest calculation.</p>
+                  <p className="text-accent/90 text-[10px] font-medium leading-relaxed">
+                    {form.frequency === 'DAILY' || form.frequency === 'WEEKLY' 
+                      ? 'Upfront interest is deducted from the principal. EMI includes principal only.' 
+                      : 'Flat interest calculation.'}
+                  </p>
                 </div>
               </div>
             </div>

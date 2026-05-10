@@ -17,6 +17,9 @@ function makeDemoPhoto(name: string): File {
 }
 
 const DEMO_PHOTOS: PhotoUploads = {
+  applicantPhoto: makeDemoPhoto('applicant_photo.png'),
+  coApplicantPhoto: makeDemoPhoto('co_applicant_photo.png'),
+  guarantorPhoto: makeDemoPhoto('guarantor_photo.png'),
   frontView: makeDemoPhoto('front_view.png'),
   leftSideView: makeDemoPhoto('left_side.png'),
   rightSideView: makeDemoPhoto('right_side.png'),

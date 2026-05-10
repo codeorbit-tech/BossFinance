@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { VehicleLoanFormData, PhotoUploads, KycDocEntry } from '../app/employee/loan-form/vehicle/types';
+import { drawFinanceAnnexures } from './financePdfAnnexures';
 
 // ─── Page Constants ───
 const PW = 210;
@@ -68,31 +69,49 @@ function subHeader(doc: Doc, y: number, text: string): number {
   return y + LINE_H;
 }
 
-/** Single label: value line */
+/** Single label: value line with wrapping for both */
 function row(doc: Doc, y: number, label: string, value: string): number {
-  y = checkPage(doc, y, SMALL_H + 2);
+  const labelW = 55;
+  const valueW = CW - labelW - 5;
+  const labelLines = doc.splitTextToSize(label + ':', labelW);
+  const valueLines = doc.splitTextToSize(value, valueW);
+  const maxLines = Math.max(labelLines.length, valueLines.length);
+  const h = maxLines * SMALL_H;
+
+  y = checkPage(doc, y, h + 2);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0);
-  doc.text(label + ':', ML + 2, y);
+  doc.text(labelLines, ML + 2, y);
+  
   doc.setFont('helvetica', 'normal');
-  const lines = doc.splitTextToSize(value, CW - 55);
-  doc.text(lines, ML + 55, y);
-  return y + Math.max(lines.length * SMALL_H, SMALL_H);
+  doc.text(valueLines, ML + labelW + 5, y);
+  
+  return y + h + 2;
 }
 
 /** Three-column row for Applicant / Co-Applicant / Guarantor */
 function triRow(doc: Doc, y: number, label: string, a: string, ca: string, g: string): number {
-  y = checkPage(doc, y, SMALL_H + 1);
-  const colW = (CW - 45) / 3;
+  const labelW = 45;
+  const colW = (CW - labelW) / 3;
+  const labelLines = doc.splitTextToSize(label, labelW - 2);
+  const aLines = doc.splitTextToSize(a, colW - 2);
+  const caLines = doc.splitTextToSize(ca, colW - 2);
+  const gLines = doc.splitTextToSize(g, colW - 2);
+  const maxLines = Math.max(labelLines.length, aLines.length, caLines.length, gLines.length);
+  const h = maxLines * SMALL_H;
+
+  y = checkPage(doc, y, h + 1);
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(label, ML + 2, y);
+  doc.text(labelLines, ML + 2, y);
+  
   doc.setFont('helvetica', 'normal');
-  doc.text(doc.splitTextToSize(a, colW - 2), ML + 47, y);
-  doc.text(doc.splitTextToSize(ca, colW - 2), ML + 47 + colW, y);
-  doc.text(doc.splitTextToSize(g, colW - 2), ML + 47 + colW * 2, y);
-  return y + SMALL_H;
+  doc.text(aLines, ML + labelW + 2, y);
+  doc.text(caLines, ML + labelW + 2 + colW, y);
+  doc.text(gLines, ML + labelW + 2 + colW * 2, y);
+  
+  return y + h + 1;
 }
 
 /** Three-column header for Applicant / Co-Applicant / Guarantor */
@@ -112,15 +131,24 @@ function triHeader(doc: Doc, y: number): number {
 
 /** Two-column row for Applicant / Co-Applicant */
 function dualRow(doc: Doc, y: number, label: string, a: string, ca: string): number {
-  y = checkPage(doc, y, SMALL_H + 1);
-  const colW = (CW - 55) / 2;
+  const labelW = 55;
+  const colW = (CW - labelW) / 2;
+  const labelLines = doc.splitTextToSize(label, labelW - 2);
+  const aLines = doc.splitTextToSize(a, colW - 2);
+  const caLines = doc.splitTextToSize(ca, colW - 2);
+  const maxLines = Math.max(labelLines.length, aLines.length, caLines.length);
+  const h = maxLines * SMALL_H;
+
+  y = checkPage(doc, y, h + 1);
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(label, ML + 2, y);
+  doc.text(labelLines, ML + 2, y);
+  
   doc.setFont('helvetica', 'normal');
-  doc.text(doc.splitTextToSize(a, colW - 2), ML + 57, y);
-  doc.text(doc.splitTextToSize(ca, colW - 2), ML + 57 + colW, y);
-  return y + SMALL_H;
+  doc.text(aLines, ML + labelW + 2, y);
+  doc.text(caLines, ML + labelW + 2 + colW, y);
+  
+  return y + h + 1;
 }
 
 /** Two-column header */
@@ -159,64 +187,155 @@ function addFooters(doc: Doc): void {
   }
 }
 
+interface LoadedPhoto {
+  data: string;
+  width: number;
+  height: number;
+  ratio: number;
+}
+
+async function loadPhoto(file: File): Promise<LoadedPhoto> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject('No context'); return; }
+        ctx.drawImage(img, 0, 0);
+        resolve({
+          data: canvas.toDataURL('image/jpeg', 0.8),
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          ratio: img.naturalHeight / img.naturalWidth,
+        });
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadStaticImage(url: string): Promise<LoadedPhoto | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const file = new File([blob], 'image.png', { type: 'image/png' });
+    return await loadPhoto(file);
+  } catch (e) {
+    return null;
+  }
+}
+
 // ─── COVER HEADER ───
-function drawCoverHeader(doc: Doc, formData: VehicleLoanFormData): number {
-  let y = 18;
+async function drawCoverHeader(doc: Doc, formData: VehicleLoanFormData, logo?: LoadedPhoto | null, applicantPhoto?: LoadedPhoto | null): Promise<number> {
+  let y = 15;
+  
+  // 1. Logo
+  if (logo) {
+    const logoW = 35;
+    const logoH = logoW * logo.ratio;
+    doc.addImage(logo.data, 'PNG', ML, y, logoW, logoH);
+  }
+
+  // 2. Applicant Photo
+  if (applicantPhoto) {
+    const photoW = 30;
+    const photoH = 40;
+    doc.setDrawColor(220);
+    doc.rect(PW - MR - photoW, y, photoW, photoH);
+    doc.addImage(applicantPhoto.data, 'JPEG', PW - MR - photoW + 1, y + 1, photoW - 2, photoH - 2);
+    doc.setFontSize(6);
+    doc.setTextColor(100);
+    doc.text('APPLICANT PHOTO', PW - MR - photoW/2, y + photoH + 4, { align: 'center' });
+  }
+
+  y = 20;
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0);
-  doc.text('BOSS FINANCE CONSULTANCY', ML, y);
+  doc.text('BOSS FINANCE CONSULTANCY', ML + 45, y);
   y += 6;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('YOUR FINANCIAL PARTNER', ML, y);
-  y += 5;
-  doc.setFontSize(8.5);
+  doc.text('YOUR FINANCIAL PARTNER', ML + 45, y);
+  
+  y = 40;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('VEHICLE LOAN APPLICATION FORM', PW - MR, 18, { align: 'right' });
+  doc.text('VEHICLE LOAN APPLICATION FORM', ML, y);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Form No: ${val(formData.applicationFormNo)}`, PW - MR, 24, { align: 'right' });
-  doc.text(`Date: ${val(formData.applicationDate)}`, PW - MR, 30, { align: 'right' });
-  y = 35;
+  doc.text(`Form No: ${val(formData.applicationFormNo)}`, PW - MR - 35, y, { align: 'right' });
+  doc.text(`Date: ${val(formData.applicationDate)}`, PW - MR - 35, y + 5, { align: 'right' });
+  
+  y = 52;
   return divider(doc, y) + 2;
 }
 
 // ─── SECTION 1: Application Info ───
 function drawSection1(doc: Doc, y: number, data: VehicleLoanFormData): number {
-  y = sectionTitle(doc, y, 'Section 1 — Application Information');
+  y = sectionTitle(doc, y, 'Section 1 — Primary Identification');
   y = triHeader(doc, y);
+  y = triRow(doc, y, 'Full Name', 
+    fullName(data.applicantPersonal.firstName, data.applicantPersonal.lastName),
+    fullName(data.coApplicantPersonal.firstName, data.coApplicantPersonal.lastName),
+    fullName(data.guarantorPersonal.firstName, data.guarantorPersonal.lastName)
+  );
+  y = triRow(doc, y, "Father's Name", 
+    fullName(data.applicantPersonal.fatherFirstName, data.applicantPersonal.fatherLastName),
+    fullName(data.coApplicantPersonal.fatherFirstName, data.coApplicantPersonal.fatherLastName),
+    fullName(data.guarantorPersonal.fatherFirstName, data.guarantorPersonal.fatherLastName)
+  );
+  y = triRow(doc, y, 'Mobile No', val(data.applicantContact.mobile), val(data.coApplicantContact.mobile), val(data.guarantorContact.mobile));
   y = triRow(doc, y, 'Entity Type', val(data.applicantEntityType), val(data.coApplicantEntityType), val(data.guarantorEntityType));
   y = triRow(doc, y, 'CKYC ID', val(data.applicantCkycId), val(data.coApplicantCkycId), val(data.guarantorCkycId));
   y = triRow(doc, y, 'GSTIN', val(data.applicantGstin), val(data.coApplicantGstin), val(data.guarantorGstin));
+  
   if (data.udyamRegNo) {
-    y += 2;
     y = row(doc, y, 'Udyam Registration No.', val(data.udyamRegNo));
   }
   return y + 4;
 }
 
-// ─── SECTION 2: Personal Details ───
+// ─── SECTION 2: KYC & Compliance ───
 function drawSection2(doc: Doc, y: number, data: VehicleLoanFormData): number {
-  y = sectionTitle(doc, y, 'Section 2 — Personal Details');
+  y = sectionTitle(doc, y, 'Section 2 — KYC Verification');
   y = triHeader(doc, y);
-  y = triRow(doc, y, 'Full Name',
-    fullName(data.applicantPersonal.firstName, data.applicantPersonal.middleName, data.applicantPersonal.lastName),
-    fullName(data.coApplicantPersonal.firstName, data.coApplicantPersonal.middleName, data.coApplicantPersonal.lastName),
-    fullName(data.guarantorPersonal.firstName, data.guarantorPersonal.middleName, data.guarantorPersonal.lastName),
+  y = triRow(doc, y, 'Aadhaar Card', 
+    val(data.kycDocuments.aadhaarCard.applicantDocNo), 
+    val(data.kycDocuments.aadhaarCard.coApplicantDocNo), 
+    val(data.kycDocuments.aadhaarCard.guarantorDocNo)
   );
+  y = triRow(doc, y, 'PAN Card', 
+    val(data.kycDocuments.panCard.applicantDocNo), 
+    val(data.kycDocuments.panCard.coApplicantDocNo), 
+    val(data.kycDocuments.panCard.guarantorDocNo)
+  );
+  return y + 4;
+}
+
+// ─── SECTION 3: Loan Details ───
+function drawSection3(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 3 — Loan Request Details');
+  y = row(doc, y, 'Requested Loan Amount', currency(data.loanDetails.loanAmount));
+  y = row(doc, y, 'Tenure (Months)', val(data.loanDetails.tenure));
+  y = row(doc, y, 'Interest Rate (% p.a.)', val(data.loanDetails.interestRate) + ' %');
+  y = row(doc, y, 'Estimated EMI', currency(data.loanDetails.emi));
+  return y + 4;
+}
+
+// ─── SECTION 4: Personal Details ───
+function drawSection4(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 4 — Personal Demographic Details');
+  y = triHeader(doc, y);
   y = triRow(doc, y, 'Gender', val(data.applicantPersonal.gender), val(data.coApplicantPersonal.gender), val(data.guarantorPersonal.gender));
   y = triRow(doc, y, 'Date of Birth', val(data.applicantPersonal.dob), val(data.coApplicantPersonal.dob), val(data.guarantorPersonal.dob));
-  y = triRow(doc, y, "Father's Name",
-    fullName(data.applicantPersonal.fatherFirstName, data.applicantPersonal.fatherMiddleName, data.applicantPersonal.fatherLastName),
-    fullName(data.coApplicantPersonal.fatherFirstName, data.coApplicantPersonal.fatherMiddleName, data.coApplicantPersonal.fatherLastName),
-    fullName(data.guarantorPersonal.fatherFirstName, data.guarantorPersonal.fatherMiddleName, data.guarantorPersonal.fatherLastName),
-  );
-  y = triRow(doc, y, "Mother's Name",
-    fullName(data.applicantPersonal.motherFirstName, data.applicantPersonal.motherMiddleName, data.applicantPersonal.motherLastName),
-    fullName(data.coApplicantPersonal.motherFirstName, data.coApplicantPersonal.motherMiddleName, data.coApplicantPersonal.motherLastName),
-    fullName(data.guarantorPersonal.motherFirstName, data.guarantorPersonal.motherMiddleName, data.guarantorPersonal.motherLastName),
-  );
   y = triRow(doc, y, 'Religion',
     val(data.applicantPersonal.religion === 'Others' ? data.applicantPersonal.religionOther : data.applicantPersonal.religion),
     val(data.coApplicantPersonal.religion === 'Others' ? data.coApplicantPersonal.religionOther : data.coApplicantPersonal.religion),
@@ -235,45 +354,43 @@ function drawSection2(doc: Doc, y: number, data: VehicleLoanFormData): number {
   return y + 4;
 }
 
-// ─── SECTION 3: Address & Contact ───
-function drawSection3(doc: Doc, y: number, data: VehicleLoanFormData): number {
+// ─── SECTION 5: Address & Contact ───
+function drawSection5(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 5 — Address & Contact Details');
   const parties = [
     { label: 'Applicant', contact: data.applicantContact },
     { label: 'Co-Applicant', contact: data.coApplicantContact },
     { label: 'Guarantor', contact: data.guarantorContact },
   ];
 
-  y = sectionTitle(doc, y, 'Section 3 — Address & Contact Details');
-
   for (const { label, contact } of parties) {
     y = subHeader(doc, y, label);
     const ca = contact.communicationAddress;
     const pa = contact.permanentSameAsCommunication ? contact.communicationAddress : contact.permanentAddress;
 
-    const commAddr = `${val(ca.fullAddress)}, Landmark: ${val(ca.landmark)}, ${val(ca.city)}, ${val(ca.district)}, ${val(ca.state)} - ${val(ca.pinCode)}`;
+    const commAddr = `${val(ca.fullAddress)}, ${val(ca.city)}, ${val(ca.district)}, ${val(ca.state)} - ${val(ca.pinCode)}`;
     const permAddr = contact.permanentSameAsCommunication
       ? 'Same as Communication Address'
-      : `${val(pa.fullAddress)}, Landmark: ${val(pa.landmark)}, ${val(pa.city)}, ${val(pa.district)}, ${val(pa.state)} - ${val(pa.pinCode)}`;
+      : `${val(pa.fullAddress)}, ${val(pa.city)}, ${val(pa.district)}, ${val(pa.state)} - ${val(pa.pinCode)}`;
 
     y = row(doc, y, 'Communication Address', commAddr);
     y = row(doc, y, 'Permanent Address', permAddr);
-    y = row(doc, y, 'Mobile No.', val(contact.mobile));
-    y = row(doc, y, 'Alternate Mobile', val(contact.alternateMobile));
+    y = row(doc, y, 'Contact No.', val(contact.mobile) + (contact.alternateMobile ? ` / ${contact.alternateMobile}` : ''));
     y = row(doc, y, 'Email', val(contact.email));
-    y += 3;
+    y += 2;
   }
-  return y + 2;
+  return y + 4;
 }
 
-// ─── SECTION 4: Residence Info ───
-function drawSection4(doc: Doc, y: number, data: VehicleLoanFormData): number {
-  y = sectionTitle(doc, y, 'Section 4 — Residence & Personal Information');
+// ─── SECTION 6: Residence ───
+function drawSection6(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 6 — Residence & Family Status');
   y = triHeader(doc, y);
-  y = triRow(doc, y, 'Residence', val(data.applicantResidence.residence), val(data.coApplicantResidence.residence), val(data.guarantorResidence.residence));
+  y = triRow(doc, y, 'Residence Ownership', val(data.applicantResidence.residence), val(data.coApplicantResidence.residence), val(data.guarantorResidence.residence));
   y = triRow(doc, y, 'Years of Stay', val(data.applicantResidence.yearsOfStay), val(data.coApplicantResidence.yearsOfStay), val(data.guarantorResidence.yearsOfStay));
   y = triRow(doc, y, 'Marital Status', val(data.applicantResidence.maritalStatus), val(data.coApplicantResidence.maritalStatus), val(data.guarantorResidence.maritalStatus));
   y = triRow(doc, y, 'No. of Dependents', val(data.applicantResidence.numberOfDependents), val(data.coApplicantResidence.numberOfDependents), val(data.guarantorResidence.numberOfDependents));
-  y = triRow(doc, y, 'Education',
+  y = triRow(doc, y, 'Highest Education',
     val(data.applicantResidence.education === 'Others' ? data.applicantResidence.educationOther : data.applicantResidence.education),
     val(data.coApplicantResidence.education === 'Others' ? data.coApplicantResidence.educationOther : data.coApplicantResidence.education),
     val(data.guarantorResidence.education === 'Others' ? data.guarantorResidence.educationOther : data.guarantorResidence.education),
@@ -281,298 +398,162 @@ function drawSection4(doc: Doc, y: number, data: VehicleLoanFormData): number {
   return y + 4;
 }
 
-// ─── SECTION 5: Bank Details ───
-function drawSection5(doc: Doc, y: number, data: VehicleLoanFormData): number {
-  y = sectionTitle(doc, y, 'Section 5 — Bank Account Details');
-
+// ─── SECTION 7: Bank Details ───
+function drawSection7(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 7 — Bank Account Details');
   const drawBank = (label: string, bank: typeof data.applicantBank): number => {
     y = subHeader(doc, y, label);
-    y = row(doc, y, 'Bank Name', val(bank.bankName));
-    y = row(doc, y, 'Branch', val(bank.branch));
-    y = row(doc, y, 'Account Type', val(bank.accountType));
-    y = row(doc, y, 'Account No.', val(bank.accountNo));
-    y = row(doc, y, 'Account Since', val(bank.accountSince));
+    y = row(doc, y, 'Bank & Branch', `${val(bank.bankName)} (${val(bank.branch)})`);
+    y = row(doc, y, 'Account Info', `${val(bank.accountNo)} [${val(bank.accountType)}]`);
     y = row(doc, y, 'IFSC Code', val(bank.ifscCode));
-    y = row(doc, y, 'Avg. Debit/Month', currency(bank.avgDebitPerMonth));
-    y = row(doc, y, 'Avg. Credit/Month', currency(bank.avgCreditPerMonth));
-    return y + 3;
+    y = row(doc, y, 'Avg Business/Month', `Debit: ${currency(bank.avgDebitPerMonth)} | Credit: ${currency(bank.avgCreditPerMonth)}`);
+    return y + 2;
   };
-
-  y = drawBank('Applicant Bank', data.applicantBank);
-  y = drawBank('Co-Applicant Bank', data.coApplicantBank);
-  return y + 2;
-}
-
-// ─── SECTION 6: Employment ───
-function drawSection6(doc: Doc, y: number, data: VehicleLoanFormData): number {
-  y = sectionTitle(doc, y, 'Section 6 — Employment Details');
-  y = dualHeader(doc, y);
-  y = dualRow(doc, y, 'Establishment / Institution', val(data.applicantEmployment.establishmentName), val(data.coApplicantEmployment.establishmentName));
-  y = dualRow(doc, y, 'Designation', val(data.applicantEmployment.designation), val(data.coApplicantEmployment.designation));
-  y = dualRow(doc, y, 'Years of Employment', val(data.applicantEmployment.yearsOfEmployment), val(data.coApplicantEmployment.yearsOfEmployment));
-  y = dualRow(doc, y, 'CTC Per Annum', currency(data.applicantEmployment.ctcPerAnnum), currency(data.coApplicantEmployment.ctcPerAnnum));
+  y = drawBank('Applicant Banking', data.applicantBank);
+  y = drawBank('Co-Applicant Banking', data.coApplicantBank);
   return y + 4;
 }
 
-// ─── SECTION 7: Property Details ───
-function drawSection7(doc: Doc, y: number, data: VehicleLoanFormData): number {
-  y = sectionTitle(doc, y, 'Section 7 — Property Details');
-
-  // Vehicles Owned
-  const parties = [
-    { label: 'Applicant', vehicles: data.applicantVehiclesOwned },
-    { label: 'Co-Applicant', vehicles: data.coApplicantVehiclesOwned },
-  ];
-
-  let hasVehicle = false;
-  for (const { label, vehicles } of parties) {
-    vehicles.forEach((v, i) => {
-      if (v.vehicle || v.registrationNo || v.makeModel) {
-        if (!hasVehicle) {
-          y = subHeader(doc, y, 'Vehicles Owned');
-          hasVehicle = true;
-        }
-        y = checkPage(doc, y, 30);
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0);
-        doc.text(`${label} Vehicle #${i + 1}`, ML + 2, y);
-        y += SMALL_H;
-        y = row(doc, y, '  Vehicle Type', val(v.vehicle));
-        y = row(doc, y, '  Registration No.', val(v.registrationNo));
-        y = row(doc, y, '  Make & Model', val(v.makeModel));
-        y = row(doc, y, '  Declared Value', currency(v.declaredValue));
-        y = row(doc, y, '  Financed By', val(v.financedBy));
-        y += 2;
-      }
-    });
-  }
-
-  // Movable Property
-  if (data.movablePropertyDescription) {
-    y = subHeader(doc, y, 'Other Movable Property');
-    y = row(doc, y, 'Description', val(data.movablePropertyDescription));
-    y = row(doc, y, 'Total Value', currency(data.movablePropertyValue));
-    y += 3;
-  }
-
-  // Immovable Property
-  const immRows = data.immovableProperties.filter(p => p.assetType);
-  if (immRows.length > 0) {
-    y = subHeader(doc, y, 'Immovable Property');
-    immRows.forEach((p, i) => {
-      y = checkPage(doc, y, 22);
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Property #${i + 1}`, ML + 2, y);
-      y += SMALL_H;
-      y = row(doc, y, '  Asset Type', val(p.assetType === 'Others' ? p.assetTypeOther : p.assetType));
-      y = row(doc, y, '  Built-up Area', val(p.builtUpArea));
-      y = row(doc, y, '  Land Area / UDS', val(p.landArea));
-      y = row(doc, y, '  Declared Value', currency(p.declaredValue));
-      y += 2;
-    });
-  }
-
-  return y + 2;
+// ─── SECTION 8: Employment ───
+function drawSection8(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 8 — Employment Details');
+  y = dualHeader(doc, y);
+  y = dualRow(doc, y, 'Organization Name', val(data.applicantEmployment.establishmentName), val(data.coApplicantEmployment.establishmentName));
+  y = dualRow(doc, y, 'Current Designation', val(data.applicantEmployment.designation), val(data.coApplicantEmployment.designation));
+  y = dualRow(doc, y, 'Experience (Years)', val(data.applicantEmployment.yearsOfEmployment), val(data.coApplicantEmployment.yearsOfEmployment));
+  y = dualRow(doc, y, 'Annual CTC', currency(data.applicantEmployment.ctcPerAnnum), currency(data.coApplicantEmployment.ctcPerAnnum));
+  return y + 4;
 }
 
-// ─── SECTION 8 & 9: Photos & Document Checklist ───
-function drawSection8(doc: Doc, y: number, data: VehicleLoanFormData, photos: PhotoUploads): number {
-  y = sectionTitle(doc, y, 'Section 8 & 9 — Photos & Document Checklist');
+// ─── SECTION 9: Property ───
+function drawSection9(doc: Doc, y: number, data: VehicleLoanFormData): number {
+  y = sectionTitle(doc, y, 'Section 9 — Existing Asset Portfolio');
+  if (data.movablePropertyDescription) {
+    y = subHeader(doc, y, 'Other Movable Assets');
+    y = row(doc, y, 'Description', val(data.movablePropertyDescription));
+    y = row(doc, y, 'Total Value', currency(data.movablePropertyValue));
+  }
+  const imm = data.immovableProperties.filter(p => p.assetType);
+  if (imm.length > 0) {
+    y = subHeader(doc, y, 'Immovable Properties');
+    imm.forEach((p, i) => {
+      y = row(doc, y, `Property #${i+1} Type`, val(p.assetType === 'Others' ? p.assetTypeOther : p.assetType));
+      y = row(doc, y, `Property #${i+1} Valuation`, currency(p.declaredValue));
+    });
+  }
+  return y + 4;
+}
 
-  // Photo status
-  y = subHeader(doc, y, 'Vehicle Photos');
-  const photoRows = [
-    { label: 'Front View (Mandatory)', uploaded: !!photos.frontView },
-    { label: 'Left Side View (Mandatory)', uploaded: !!photos.leftSideView },
-    { label: 'Right Side View (Mandatory)', uploaded: !!photos.rightSideView },
-    { label: 'Back View (Mandatory)', uploaded: !!photos.backView },
+// ─── SECTION 10: Photos Gallery (Personal + Vehicle) ───
+async function drawSection10Photos(doc: jsPDF, photos: PhotoUploads): Promise<void> {
+  // Page 1: Personal Portraits
+  doc.addPage();
+  let y = 20;
+  y = sectionTitle(doc, y, 'Section 10 — Portrait Gallery');
+  
+  const portraitW = 50;
+  const portraitH = 65;
+  const portraitSpacing = (CW - (3 * portraitW)) / 2;
+
+  const portraits = [
+    { label: 'APPLICANT', file: photos.applicantPhoto },
+    { label: 'CO-APPLICANT', file: photos.coApplicantPhoto },
+    { label: 'GUARANTOR', file: photos.guarantorPhoto },
   ];
-  photoRows.forEach(p => {
-    y = row(doc, y, p.label, p.uploaded ? 'Submitted' : 'Not Submitted');
-  });
-  const optionalCount = photos.others.filter(Boolean).length;
-  y = row(doc, y, 'Additional Photos (Optional)', `${optionalCount} of 5 submitted`);
-  y += 3;
 
-  // KYC Documents
+  for (let i = 0; i < portraits.length; i++) {
+    const { label, file } = portraits[i];
+    const x = ML + i * (portraitW + portraitSpacing);
+    doc.setDrawColor(200);
+    doc.rect(x, y, portraitW, portraitH);
+    if (file) {
+      try {
+        const photo = await loadPhoto(file);
+        doc.addImage(photo.data, 'JPEG', x + 1, y + 1, portraitW - 2, portraitH - 2);
+      } catch (e) { console.error(e); }
+    } else {
+      doc.setFontSize(8);
+      doc.text('NO PHOTO', x + portraitW/2, y + portraitH/2, { align: 'center' });
+    }
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, x + portraitW/2, y + portraitH + 5, { align: 'center' });
+  }
+
+  // Page 2: Vehicle Inspection Views
+  doc.addPage();
+  y = 20;
+  y = sectionTitle(doc, y, 'Section 10 — Vehicle Inspection Gallery');
+  
+  const drawInspectionPair = async (labelLeft: string, fileLeft: File | null, labelRight: string, fileRight: File | null, yPos: number): Promise<number> => {
+    const imgW = (CW - 10) / 2;
+    const imgH = imgW * 0.75;
+    
+    const drawSingle = async (label: string, file: File | null, x: number) => {
+      doc.setDrawColor(200);
+      doc.rect(x, yPos, imgW, imgH);
+      if (file) {
+        try {
+          const photo = await loadPhoto(file);
+          doc.addImage(photo.data, 'JPEG', x + 1, yPos + 1, imgW - 2, imgH - 2);
+        } catch (e) {}
+      }
+      doc.setFontSize(8);
+      doc.text(label, x + imgW/2, yPos + imgH + 5, { align: 'center' });
+    };
+
+    await drawSingle(labelLeft, fileLeft, ML);
+    await drawSingle(labelRight, fileRight, ML + imgW + 10);
+    return yPos + imgH + 12;
+  };
+
+  y = await drawInspectionPair('FRONT VIEW', photos.frontView, 'BACK VIEW', photos.backView, y + 5);
+  y = await drawInspectionPair('LEFT SIDE VIEW', photos.leftSideView, 'RIGHT SIDE VIEW', photos.rightSideView, y + 5);
+}
+
+// ─── SECTION 11: Document Checklist ───
+async function drawSection11(doc: Doc, y: number, data: VehicleLoanFormData): Promise<number> {
+  doc.addPage();
+  y = 20;
+  y = sectionTitle(doc, y, 'Section 11 — Internal Checklist');
+  
+  y = subHeader(doc, y, 'Compliance Verification');
+  
   const KYC_LABELS: Record<string, string> = {
     aadhaarCard: 'Aadhaar Card',
     panCard: 'PAN Card',
     passport: 'Passport',
     drivingLicence: 'Driving Licence',
-    gasConnection: 'Gas Connection Card',
-    waterBill: 'Water Bill',
-    electricityBill: 'Electricity Bill',
-    mobilePostpaidBill: 'Postpaid Mobile/Tel Bill',
-    voterIdCard: 'Voter ID Card',
   };
 
-  y = subHeader(doc, y, 'KYC Document Verification');
-
-  // Header
-  const colW = (CW - 55) / 3;
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Document', ML + 2, y);
-  doc.text('Applicant', ML + 57, y);
-  doc.text('Co-Applicant', ML + 57 + colW, y);
-  doc.text('Guarantor', ML + 57 + colW * 2, y);
-  doc.setLineWidth(0.1);
-  doc.line(ML, y + 1, PW - MR, y + 1);
-  y += SMALL_H;
-
-  Object.entries(data.kycDocuments).forEach(([key, entry]: [string, KycDocEntry]) => {
-    y = checkPage(doc, y, SMALL_H + 1);
+  Object.entries(data.kycDocuments).slice(0, 4).forEach(([key, entry]: [string, KycDocEntry]) => {
     const label = KYC_LABELS[key] ?? key;
-    const aVal = entry.applicantChecked ? `Yes (${entry.applicantDocNo || 'No. not entered'})` : 'No';
-    const caVal = entry.coApplicantChecked ? `Yes (${entry.coApplicantDocNo || 'No. not entered'})` : 'No';
-    const gVal = entry.guarantorChecked ? `Yes (${entry.guarantorDocNo || 'No. not entered'})` : 'No';
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text(label, ML + 2, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(aVal, ML + 57, y);
-    doc.text(caVal, ML + 57 + colW, y);
-    doc.text(gVal, ML + 57 + colW * 2, y);
-    y += SMALL_H;
+    const aVal = entry.applicantChecked ? `Verified (${entry.applicantDocNo})` : 'Pending';
+    y = row(doc, y, label, aVal);
   });
-  y += 3;
 
-  // Pre-Sanction Docs
-  y = subHeader(doc, y, 'Pre-Sanction Documents');
-  const PRE_LABELS: Record<string, string> = {
-    proformaInvoice: 'Proforma Invoice & Margin Money receipt for new asset',
-    saleDeedUsed: 'Sale deed for used asset',
-    rcUsedAsset: 'RC for used asset / Original invoice for unregistrable asset',
-    insurance: 'Comprehensive Insurance Policy',
-    bankStatement: 'Bank statement (last 6 months)',
-    itr: 'Last 2 years ITR (if income assessee)',
-    nonIndividualDoc: "Non-individual entity's relevant document",
-  };
-  Object.entries(PRE_LABELS).forEach(([key, label]) => {
-    const status = (data.preSanctionDocs as any)[key] ? 'Verified' : 'Pending';
-    y = row(doc, y, label, status);
-  });
-  if (data.preSanctionDocs.othersText) {
-    y = row(doc, y, `Others: ${data.preSanctionDocs.othersText}`, 'Pending');
-  }
-  y += 3;
-
-  // Post-Disbursement Docs
-  y = subHeader(doc, y, 'Post-Disbursement Documents');
-  y = row(doc, y, 'Original Invoice (new asset) with hypothecation', data.postDisbursementDocs.originalInvoiceNew ? 'Received' : 'Pending');
-  y = row(doc, y, 'Registration Certificate with hypothecation', data.postDisbursementDocs.rcHypothecation ? 'Received' : 'Pending');
-  y = row(doc, y, 'Insurance Policy with hypothecation', data.postDisbursementDocs.insuranceHypothecation ? 'Received' : 'Pending');
-  if (data.postDisbursementDocs.othersText) {
-    y = row(doc, y, `Others: ${data.postDisbursementDocs.othersText}`, 'Pending');
-  }
-
-  return y + 4;
+  return y + 10;
 }
 
-// ─── DECLARATION PAGE ───
-function drawDeclarationPage(doc: Doc, data: VehicleLoanFormData): void {
+function drawDeclaration(doc: Doc, data: VehicleLoanFormData) {
   doc.addPage();
   let y = 20;
-
-  y = sectionTitle(doc, y, 'Declaration by Applicant, Co-Applicant & Guarantor');
-  y += 2;
-
-  const declarationText = [
-    'I/We, the undersigned, hereby declare and confirm the following:',
-    '',
-    '1. The information furnished in this loan application form is true, correct, and complete to the best of my/our knowledge and belief. No material information has been concealed or withheld.',
-    '',
-    '2. I/We authorize Boss Finance Consultancy to verify the information provided herein, including credit history, employment details, and other relevant data from appropriate sources.',
-    '',
-    '3. I/We understand that submission of this application does not guarantee loan approval. Boss Finance Consultancy reserves the right to reject any application without assigning reasons.',
-    '',
-    '4. I/We agree to abide by the terms and conditions of the loan agreement to be executed upon sanction, including repayment schedule, penal interest, and hypothecation obligations.',
-    '',
-    '5. I/We consent to the use and processing of my/our personal data as required for the evaluation and operation of this loan application, in accordance with applicable laws.',
-    '',
-    '6. The vehicle for which the loan is sought is/will be registered in the name of the Applicant, and the hypothecation shall be in favour of Boss Finance Consultancy until the loan is fully repaid.',
-    '',
-    '7. I/We shall maintain adequate insurance on the financed vehicle, with Boss Finance Consultancy noted as the hypothecatee, throughout the term of the loan.',
-    '',
-    '8. I/We acknowledge that any false statement or misrepresentation of facts will render this application null and void and may result in immediate recall of the loan amount.',
-  ];
-
-  doc.setFontSize(8);
+  y = sectionTitle(doc, y, 'Official Declaration & Signatures');
+  
+  const text = "I/We hereby declare that all the information provided in this application is true and complete to the best of my/our knowledge. I/We understand that any false information may lead to the rejection of the application or recall of the loan if disbursed. I/We authorize Boss Finance Consultancy to conduct necessary credit checks and visit premises as part of the evaluation process.";
+  const lines = doc.splitTextToSize(text, CW);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0);
+  doc.text(lines, ML, y + 5);
+  y += 25;
 
-  for (const line of declarationText) {
-    if (line === '') {
-      y += 2;
-      continue;
-    }
-    y = checkPage(doc, y, 8);
-    const lines = doc.splitTextToSize(line, CW - 4);
-    doc.text(lines, ML + 2, y);
-    y += lines.length * 5;
-  }
-
-  y += 8;
-
-  // Signatures
-  y = sectionTitle(doc, y, 'Signatures & Date');
-  y += 4;
-
-  const signCols = [
-    { label: 'Applicant', name: fullName(data.applicantPersonal.firstName, data.applicantPersonal.middleName, data.applicantPersonal.lastName) },
-    { label: 'Co-Applicant', name: fullName(data.coApplicantPersonal.firstName, data.coApplicantPersonal.middleName, data.coApplicantPersonal.lastName) },
-    { label: 'Guarantor', name: fullName(data.guarantorPersonal.firstName, data.guarantorPersonal.middleName, data.guarantorPersonal.lastName) },
-  ];
-
-  const colW = CW / 3;
-  signCols.forEach(({ label, name }, i) => {
-    const x = ML + i * colW;
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0);
-    doc.text(label, x, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(name, x, y + 5);
-    doc.setLineWidth(0.3);
-    doc.line(x, y + 18, x + colW - 4, y + 18);
-    doc.setFontSize(6.5);
-    doc.text('Signature / Thumb Impression', x, y + 22);
+  const signColW = CW / 3;
+  ['APPLICANT', 'CO-APPLICANT', 'GUARANTOR'].forEach((label, i) => {
+    const x = ML + i * signColW;
+    doc.line(x + 5, y + 20, x + signColW - 5, y + 20);
+    doc.setFontSize(8);
+    doc.text(label, x + signColW/2, y + 25, { align: 'center' });
   });
-  y += 28;
-
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Date: ___________________', ML, y);
-  doc.text('Place: ___________________', ML + 70, y);
-  y += 14;
-
-  // Employee section
-  y = checkPage(doc, y, 30);
-  y = sectionTitle(doc, y, 'For Official Use Only — Filled by Employee');
-  y += 2;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Employee Name: _______________________________', ML, y);
-  doc.text('Date of Filing: _____________________________', ML + 100, y);
-  y += 8;
-  doc.text('Employee ID: ________________________________', ML, y);
-  doc.text("Employee's Signature: _______________________", ML + 100, y);
-  y += 10;
-  doc.text('Office Seal:', ML, y);
-  doc.setLineWidth(0.2);
-  doc.rect(ML + 25, y - 4, 35, 20);
-  y += 26;
-
-  // Terms note
-  y = checkPage(doc, y, 15);
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'italic');
-  const tnc = 'The loan will be subject to the Standard Terms and Conditions of Boss Finance Consultancy, a copy of which will be provided to the customer at the time of sanction. By signing above, the Applicant, Co-Applicant, and Guarantor confirm that they have read, understood, and agree to be bound by these terms.';
-  const tncLines = doc.splitTextToSize(tnc, CW - 4);
-  doc.text(tncLines, ML + 2, y);
 }
 
 // ─── MAIN EXPORT FUNCTION ───
@@ -582,9 +563,15 @@ export async function generateVehicleLoanPDF(
   employeeName?: string
 ): Promise<{ blob: Blob; url: string; fileName: string }> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  
+  // Load static resources
+  const logo = await loadStaticImage('/BossLogo.png');
+  let appPhoto: LoadedPhoto | null = null;
+  if (photos.applicantPhoto) {
+    try { appPhoto = await loadPhoto(photos.applicantPhoto); } catch (e) {}
+  }
 
-  let y = drawCoverHeader(doc, formData);
-
+  let y = await drawCoverHeader(doc, formData, logo, appPhoto);
   y = drawSection1(doc, y, formData);
   y = drawSection2(doc, y, formData);
   y = drawSection3(doc, y, formData);
@@ -592,15 +579,19 @@ export async function generateVehicleLoanPDF(
   y = drawSection5(doc, y, formData);
   y = drawSection6(doc, y, formData);
   y = drawSection7(doc, y, formData);
-  y = drawSection8(doc, y, formData, photos);
-
-  drawDeclarationPage(doc, formData);
+  y = drawSection8(doc, y, formData);
+  y = drawSection9(doc, y, formData);
+  
+  await drawSection10Photos(doc, photos);
+  await drawSection11(doc, 30, formData);
+  drawFinanceAnnexures(doc, formData, 'VEHICLE');
+  drawDeclaration(doc, formData);
 
   addFooters(doc);
 
-  const fileName = `VehicleLoan_${formData.applicationFormNo}_${formData.applicationDate.replace(/-/g, '')}.pdf`;
-  const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  
-  return { blob, url, fileName };
+  const pdfOutput = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfOutput);
+  const fileName = `VehicleLoan_${formData.applicationFormNo || 'Draft'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+  return { blob: pdfOutput, url: pdfUrl, fileName };
 }

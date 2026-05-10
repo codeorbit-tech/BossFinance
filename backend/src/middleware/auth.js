@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -11,7 +13,18 @@ const authenticate = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+
+    // DB can be reset while a token is still present in localStorage.
+    // In that case, reject stale tokens whose user no longer exists.
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, username: true, role: true, name: true },
+    });
+    if (!user) {
+      return res.status(401).json({ error: 'User no longer exists. Please login again.' });
+    }
+
+    req.user = user;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token.' });

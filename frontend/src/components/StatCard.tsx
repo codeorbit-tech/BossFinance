@@ -30,9 +30,12 @@ const labelStyles = {
   primary: 'text-primary-fixed',
 };
 
-export default function StatCard({ label, value, subtitle, variant = 'default', children }: StatCardProps) {
+export default function StatCard({ label, value, subtitle, variant = 'default', children, onClick }: StatCardProps & { onClick?: () => void }) {
   return (
-    <div className={`p-6 rounded-xl relative overflow-hidden group ${variantStyles[variant]}`}>
+    <div 
+      onClick={onClick}
+      className={`p-6 rounded-xl relative overflow-hidden group transition-all duration-200 ${variantStyles[variant]} ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] border border-outline-variant/10' : ''}`}
+    >
       {variant === 'default' && (
         <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 group-hover:scale-110 transition-transform duration-500" />
       )}

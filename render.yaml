@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: boss-finance-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: PORT
+        value: 5000
+      - key: CASHFREE_APP_ID
+        sync: false
+      - key: CASHFREE_SECRET_KEY
+        sync: false
+      - key: CASHFREE_ENVIRONMENT
+        value: SANDBOX
+      - key: ADMIN_PHONE
+        value: "+918888877777"
+      - key: CORS_ORIGINS
+        value: "http://localhost:3000,https://your-frontend-domain.vercel.app"

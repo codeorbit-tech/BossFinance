@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -48,8 +49,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/register (admin only, for seeding)
-router.post('/register', async (req, res) => {
+// POST /api/auth/register
+router.post('/register', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const { username, password, name, role, email, phone } = req.body;
 

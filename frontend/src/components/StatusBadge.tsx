@@ -11,6 +11,7 @@ const statusStyles: Record<string, string> = {
   DUE_TODAY: 'bg-accent/10 text-accent',
   UPCOMING: 'bg-tertiary-fixed-dim/30 text-on-tertiary-fixed-variant',
   PENDING: 'bg-amber-100 text-amber-700',
+  PENALTY_PENDING: 'bg-amber-100 text-amber-700',
   CLEARED: 'bg-surface-container-highest text-on-surface-variant',
   CLOSED: 'bg-surface-container-highest text-on-surface-variant',
   REJECTED: 'bg-error-container/40 text-error',

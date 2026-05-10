@@ -1,28 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { useStoredUser } from '@/lib/authState';
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
+  const user = useStoredUser();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!user) {
       router.push('/login');
       return;
     }
-    const user = JSON.parse(userStr);
     if (user.role === 'ADMIN') {
       router.push('/admin/dashboard');
-    } else {
-      setAuthorized(true);
     }
-  }, [router]);
+  }, [mounted, router, user]);
 
-  if (!authorized) return null;
+  if (!mounted) return null;
+  if (!user || user.role === 'ADMIN') return null;
 
   return <AppLayout>{children}</AppLayout>;
 }

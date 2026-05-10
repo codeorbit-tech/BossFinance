@@ -1,0 +1,88 @@
+'use client';
+
+import { HomeLoanFormData } from './types';
+import PartyPersonalDetailsForm from './PartyPersonalDetailsForm';
+
+interface Props {
+  formData: HomeLoanFormData;
+  updateFormData: (updates: Partial<HomeLoanFormData>) => void;
+  errors: string[];
+}
+
+function InputField({
+  label, value, onChange, placeholder, required, type = "text", disabled = false
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; required?: boolean; type?: string; disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+        {label} {required && <span className="text-error">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-xl px-4 py-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all placeholder:text-on-surface-variant/40 font-medium disabled:opacity-50"
+      />
+    </div>
+  );
+}
+
+export default function Section2CoApplicantDetails({ formData, updateFormData, errors }: Props) {
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Overview */}
+      <div className="bg-secondary/5 border border-secondary/10 rounded-2xl p-5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined">group</span>
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-on-surface mb-1">Section 2: Co-Applicant Details</h4>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            Please enter the co-applicant&apos;s personal details as per Aadhaar. Leave blank if there is no co-applicant.
+          </p>
+        </div>
+      </div>
+
+      <section className="space-y-6 bg-surface-container-low/50 p-6 rounded-2xl border border-outline-variant/10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+              Co-Applicant Entity Type
+            </label>
+            <select
+              value={formData.coApplicantEntityType}
+              onChange={e => updateFormData({ coApplicantEntityType: e.target.value as any })}
+              className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-xl px-4 py-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all font-medium appearance-none"
+            >
+              <option value="" disabled>Select...</option>
+              <option value="Individual">Individual</option>
+              <option value="Non-Individual">Non-Individual</option>
+            </select>
+          </div>
+          {formData.coApplicantEntityType === 'Non-Individual' && (
+            <InputField
+              label="GSTIN"
+              value={formData.coApplicantGstin}
+              onChange={v => updateFormData({ coApplicantGstin: v })}
+            />
+          )}
+        </div>
+      </section>
+
+      <section className="bg-surface-container-low/50 p-6 rounded-2xl border border-outline-variant/10">
+        <PartyPersonalDetailsForm
+          data={formData.coApplicantPersonal}
+          updateData={v => updateFormData({ coApplicantPersonal: v })}
+          ownedHouseValue={formData.coApplicantOwnedHouse}
+          onOwnedHouseUpdate={v => updateFormData({ coApplicantOwnedHouse: v })}
+          isApplicant={false}
+        />
+      </section>
+    </div>
+  );
+}

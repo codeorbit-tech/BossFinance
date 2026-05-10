@@ -75,8 +75,8 @@ export default function SubmissionsPage() {
                   <tr key={s.id} className="hover:bg-surface transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="font-bold text-tertiary">{s.customer.name}</span>
-                        <span className="text-xs text-on-surface-variant">{s.customer.customerId}</span>
+                        <span className="font-bold text-tertiary">{s.customer?.name || 'Unknown'}</span>
+                        <span className="text-xs text-on-surface-variant">{s.customer?.customerId || 'N/A'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-on-surface-variant capitalize">{s.loanType.toLowerCase()}</td>

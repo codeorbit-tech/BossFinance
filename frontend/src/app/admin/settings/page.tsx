@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { settingsApi, usersApi } from '@/lib/api';
+import { settingsApi, usersApi, authApi } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Holiday {
@@ -22,7 +22,10 @@ interface User {
   createdAt: string;
 }
 
+interface CurrentUser { id: string; username: string; name: string; role: string; email: string | null; phone: string | null; }
+
 export default function SettingsPage() {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,6 +55,12 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchData();
     fetchUsers();
+    // Fetch current logged-in user profile
+    authApi.me().then(res => setCurrentUser(res.data.user)).catch(() => {
+      // Fall back to localStorage if API fails
+      const stored = localStorage.getItem('user');
+      if (stored) try { setCurrentUser(JSON.parse(stored)); } catch {}
+    });
   }, []);
 
   const fetchData = async () => {
@@ -165,13 +174,14 @@ export default function SettingsPage() {
           </div>
           <div className="flex items-center gap-6 mb-8">
             <div className="w-20 h-20 rounded-xl bg-surface-container-high border-4 border-surface shadow-sm flex items-center justify-center text-2xl font-bold text-on-secondary-container">
-              AV
+              {currentUser ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '—'}
             </div>
             <div>
-              <p className="text-2xl font-bold text-tertiary leading-tight">Aditya Varma</p>
+              <p className="text-2xl font-bold text-tertiary leading-tight">{currentUser?.name ?? '...'}</p>
+              <p className="text-sm text-on-surface-variant font-mono">@{currentUser?.username ?? '...'}</p>
               <p className="text-on-surface-variant flex items-center gap-2 mt-1">
                 <span className="material-symbols-outlined text-base">verified_user</span>
-                Master Administrator Account
+                {currentUser?.role === 'ADMIN' ? 'Master Administrator Account' : 'Employee Account'}
               </p>
             </div>
           </div>
@@ -181,14 +191,14 @@ export default function SettingsPage() {
                 <span className="material-symbols-outlined text-secondary">call</span>
                 <span className="text-sm font-medium text-on-surface-variant">Phone Number</span>
               </div>
-              <span className="text-tertiary font-bold">+91 88888 77777</span>
+              <span className="text-tertiary font-bold">{currentUser?.phone ?? '—'}</span>
             </div>
             <div className="bg-surface-container-low/50 p-4 rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-secondary">mail</span>
                 <span className="text-sm font-medium text-on-surface-variant">Email Address</span>
               </div>
-              <span className="text-tertiary font-bold">aditya.varma@bossfinance.in</span>
+              <span className="text-tertiary font-bold">{currentUser?.email ?? '—'}</span>
             </div>
           </div>
         </section>

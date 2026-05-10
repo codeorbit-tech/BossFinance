@@ -2,14 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  role: 'ADMIN' | 'EMPLOYEE';
-  email?: string;
-}
+import { useState } from 'react';
+import { notifyAuthChanged, useStoredUser } from '@/lib/authState';
 
 const adminNav = [
   { href: '/admin/dashboard', icon: 'dashboard', label: 'Dashboard' },
@@ -18,6 +12,7 @@ const adminNav = [
   { href: '/admin/repayments', icon: 'payments', label: 'Repayment Tracker' },
   { href: '/admin/expense-tracker', icon: 'receipt_long', label: 'Expense Tracker' },
   { href: '/admin/notifications', icon: 'notifications', label: 'Notifications' },
+  { href: '/admin/audit-logs', icon: 'history', label: 'Audit Trail' },
   { href: '/admin/settings', icon: 'settings', label: 'Settings' },
 ];
 
@@ -25,24 +20,21 @@ const employeeNav = [
   { href: '/employee/dashboard', icon: 'dashboard', label: 'Dashboard' },
   { href: '/employee/loan-form', icon: 'person_add', label: 'New Loan' },
   { href: '/employee/submissions', icon: 'list_alt', label: 'My Submissions' },
+  { href: '/employee/repayments', icon: 'payments', label: 'Repayment Tracker' },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const user = useStoredUser();
   const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
-  }, []);
 
   const navItems = user?.role === 'ADMIN' ? adminNav : employeeNav;
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    notifyAuthChanged();
     router.push('/login');
   };
 
@@ -63,7 +55,7 @@ export default function Sidebar() {
         <div className={`px-4 mb-8 ${collapsed ? 'lg:px-2' : ''}`}>
           <div className={`flex items-center ${collapsed ? 'flex-col gap-2' : 'gap-3'}`}>
             <div className={`bg-white rounded-xl flex items-center justify-center shrink-0 overflow-hidden border-2 border-white/20 ${collapsed ? 'w-14 h-14' : 'w-12 h-12'}`}>
-              <img src="/BossLogo.png" alt="Logo" className="w-full h-full object-cover" />
+              <img src="/BossLogo.png" alt="Logo" className="w-full h-full object-cover scale-[1.8]" />
             </div>
             {!collapsed && (
               <div className="overflow-hidden">

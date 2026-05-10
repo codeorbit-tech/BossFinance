@@ -22,7 +22,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== 'undefined') {
+    const requestUrl = String(err.config?.url || '');
+    const isAuthCheck = requestUrl.includes('/auth/me');
+    const isLoginRequest = requestUrl.includes('/auth/login');
+
+    if (err.response?.status === 401 && typeof window !== 'undefined' && (isAuthCheck || isLoginRequest)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -55,7 +59,7 @@ export const loansApi = {
   get: (id: string) => api.get(`/loans/${id}`),
   create: (data: Record<string, unknown>) => api.post('/loans', data),
   approve: (id: string) => api.patch(`/loans/${id}/approve`),
-  disburse: (id: string) => api.patch(`/loans/${id}/disburse`),
+  disburse: (id: string, disbursementMethod?: string) => api.patch(`/loans/${id}/disburse`, { disbursementMethod }),
   query: (id: string, description: string) => api.patch(`/loans/${id}/query`, { description }),
   updatePdf: (id: string, pdfUrl: string) => api.patch(`/loans/${id}/pdf`, { pdfUrl }),
   uploadPdf: (id: string, file: File | Blob) => {
@@ -66,12 +70,20 @@ export const loansApi = {
     });
   },
   resubmit: (id: string, data: Record<string, any>) => api.patch(`/loans/${id}/resubmit`, data),
+  getPreclosureQuote: (id: string) => api.get(`/loans/${id}/preclosure-quote`),
+  precloseLoan: (id: string, data: Record<string, any>) => api.post(`/loans/${id}/preclose`, data),
 };
 
 // ─── Repayments ───
 export const repaymentsApi = {
   list: (params?: Record<string, string>) => api.get('/repayments', { params }),
   record: (data: Record<string, unknown>) => api.post('/repayments', data),
+  stats: () => api.get('/repayments/stats'),
+  getNpaSummary: (params?: Record<string, string>) => api.get('/repayments/npa-summary', { params }),
+  getNpaDetails: (params?: Record<string, string>) => api.get('/repayments/npa-details', { params }),
+  getOverdueDetails: (params?: Record<string, string>) => api.get('/repayments/overdue-details', { params }),
+  settlePenalties: (data: { loanId: string, amount: number, discount?: number, method: string, description?: string }) =>
+    api.post('/repayments/settle-penalties', data),
 };
 
 // ─── Notifications ───
@@ -82,8 +94,11 @@ export const notificationsApi = {
 
 // ─── Expenses ───
 export const expensesApi = {
-  list: () => api.get('/expenses'),
+  list: (params?: Record<string, string>) => api.get('/expenses', { params }),
+  income: (params?: Record<string, string>) => api.get('/expenses/income', { params }),
+  summary: (params?: Record<string, string>) => api.get('/expenses/summary', { params }),
   create: (data: Record<string, unknown>) => api.post('/expenses', data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/expenses/${id}`, data),
   delete: (id: string) => api.delete(`/expenses/${id}`),
 };
 
@@ -102,6 +117,23 @@ export const analyticsApi = {
   getDashboard: (period: string) => api.get('/analytics/dashboard', { params: { period } }),
   getRecentActivity: () => api.get('/analytics/activity'),
   getEmployeeStats: () => api.get('/analytics/employee'),
+  getEmployeeActivity: () => api.get('/analytics/employee/activity'),
+  getTodayCollection: () => api.get('/analytics/employee/today-collection'),
+  getAdminTodayCollection: () => api.get('/analytics/today-collection'),
+  summary: (params: Record<string, string>) => api.get('/analytics/expense-tracker', { params }),
+  getProfitBreakdown: (params: { frequency?: string }) => api.get('/analytics/profit-breakdown', { params }),
+};
+
+// ─── Audit Logs ───
+export const auditApi = {
+  list: (params?: Record<string, string>) => api.get('/audit', { params }),
+};
+
+// ─── Investments ───
+export const investmentApi = {
+  list: (params: { month?: string, year?: string }) => api.get('/investments', { params }),
+  create: (data: Record<string, unknown>) => api.post('/investments', data),
+  delete: (id: string) => api.delete(`/investments/${id}`),
 };
 
 // ─── Users (Staff) ───
@@ -109,4 +141,10 @@ export const usersApi = {
   list: () => api.get('/users'),
   create: (data: Record<string, unknown>) => api.post('/users', data),
   delete: (id: string) => api.delete(`/users/${id}`),
+};
+
+// ─── Cashfree ───
+export const cashfreeApi = {
+  createSubscription: (loanId: string) =>
+    api.post(`/cashfree/loans/${loanId}/create-subscription`),
 };

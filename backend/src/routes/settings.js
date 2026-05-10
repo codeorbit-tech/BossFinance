@@ -1,13 +1,13 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // --- Holiday Endpoints ---
 
-router.get('/holidays', authenticate, async (req, res) => {
+router.get('/holidays', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const holidays = await prisma.holiday.findMany({
       orderBy: { date: 'asc' },
@@ -19,7 +19,7 @@ router.get('/holidays', authenticate, async (req, res) => {
   }
 });
 
-router.post('/holidays', authenticate, async (req, res) => {
+router.post('/holidays', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const { date, name, type, state } = req.body;
     const holiday = await prisma.holiday.create({
@@ -37,7 +37,7 @@ router.post('/holidays', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/holidays/:id', authenticate, async (req, res) => {
+router.delete('/holidays/:id', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     await prisma.holiday.delete({
       where: { id: req.params.id },
@@ -51,7 +51,7 @@ router.delete('/holidays/:id', authenticate, async (req, res) => {
 
 // --- Global Settings Endpoints ---
 
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const settings = await prisma.setting.findMany();
     // Convert to a more usable object format
@@ -66,7 +66,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const { key, value, description } = req.body;
     const setting = await prisma.setting.upsert({

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
+import { notifyAuthChanged } from '@/lib/authState';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -24,16 +25,15 @@ export default function LoginPage() {
       const { data } = await authApi.login(username, password);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      notifyAuthChanged();
       toast.success(`Welcome back, ${data.user.name}!`);
 
-      // Redirect based on role
-      setTimeout(() => {
-        if (data.user.role === 'ADMIN') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/employee/dashboard');
-        }
-      }, 500);
+      // Force full navigation so auth state is re-read reliably after login.
+      if (data.user.role === 'ADMIN') {
+        window.location.href = '/admin/dashboard';
+      } else {
+        window.location.href = '/employee/dashboard';
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       toast.error(error.response?.data?.error || 'Login failed. Please try again.');
@@ -55,7 +55,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-accent/30 overflow-hidden border-4 border-white">
-            <img src="/BossLogo.png" alt="Boss Finance Logo" className="w-full h-full object-cover" />
+            <img src="/BossLogo.png" alt="Boss Finance Logo" className="w-full h-full object-cover scale-[1.5]" />
           </div>
           <h1 className="text-3xl font-extrabold text-white font-[var(--font-headline)] tracking-tight">Boss Finance</h1>
           <p className="text-accent text-xs uppercase tracking-[0.3em] mt-1">& Consulting</p>

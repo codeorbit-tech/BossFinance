@@ -11,45 +11,80 @@ const loanRoutes = require('./routes/loans');
 const repaymentRoutes = require('./routes/repayments');
 const notificationRoutes = require('./routes/notifications');
 const expenseRoutes = require('./routes/expenses');
+const investmentRoutes = require('./routes/investments');
 const settingRoutes = require('./routes/settings');
 const analyticsRoutes = require('./routes/analytics');
 const userRoutes = require('./routes/users');
+const auditRoutes = require('./routes/audit');
+const { initPenaltyJob } = require('./jobs/penaltyJob');
 
-const app = express();
 const PORT = process.env.PORT || 5000;
+const DEFAULT_CORS_ORIGINS = [
+  'http://localhost:3000',
+  'https://boss-finance-80gk5f5or-codeorbit-techs-projects.vercel.app',
+];
 
-// Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://boss-finance-80gk5f5or-codeorbit-techs-projects.vercel.app'],
-  credentials: true,
-}));
-app.use(express.json());
+function getAllowedOrigins() {
+  const raw = process.env.CORS_ORIGINS;
+  if (!raw) return DEFAULT_CORS_ORIGINS;
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+function createApp() {
+  const app = express();
+  const allowedOrigins = getAllowedOrigins();
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/loans', loanRoutes);
-app.use('/api/repayments', repaymentRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/settings', settingRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/users', userRoutes);
+  app.use(cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }));
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+  // Cashfree webhook must be before express.json to preserve raw body.
+  app.use('/webhook/cashfree', express.raw({ type: 'application/json' }), require('./routes/cashfreeWebhook'));
 
-const server = app.listen(PORT, () => {
-  console.log(`🏦 Boss Finance API running on http://localhost:${PORT}`);
-});
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-server.on('error', (err) => {
-  console.error('SERVER BIND ERROR:', err);
-});
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-module.exports = app;
+  app.use('/api/auth', authRoutes);
+  app.use('/api/customers', customerRoutes);
+  app.use('/api/loans', loanRoutes);
+  app.use('/api/repayments', repaymentRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/expenses', expenseRoutes);
+  app.use('/api/investments', investmentRoutes);
+  app.use('/api/settings', settingRoutes);
+  app.use('/api/analytics', analyticsRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/audit', auditRoutes);
+  app.use('/api/cashfree', require('./routes/cashfree'));
+
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  return app;
+}
+
+function startServer(port = PORT) {
+  const app = createApp();
+  const server = app.listen(port, () => {
+    console.log(`Boss Finance API running on http://localhost:${port}`);
+    initPenaltyJob();
+  });
+
+  server.on('error', (err) => {
+    console.error('SERVER BIND ERROR:', err);
+  });
+
+  return server;
+}
+
+const app = createApp();
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, createApp, startServer };

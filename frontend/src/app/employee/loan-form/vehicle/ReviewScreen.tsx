@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import toast from 'react-hot-toast';
 import { VehicleLoanFormData, PhotoUploads } from './types';
 
 interface Props {
@@ -21,22 +19,22 @@ function SectionReviewCard({
   sectionNo: number; title: string; icon: string; onEdit: () => void; children: React.ReactNode;
 }) {
   return (
-    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 overflow-hidden">
+    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 overflow-hidden shadow-sm">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-outline-variant/10 bg-surface-container/50">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-full bg-accent text-white text-xs font-bold flex items-center justify-center">{sectionNo}</div>
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-accent text-base">{icon}</span>
-            <h4 className="text-sm font-bold text-on-surface">{title}</h4>
+            <h4 className="text-xs font-black text-on-surface uppercase tracking-widest">{title}</h4>
           </div>
         </div>
         <button
           type="button"
           onClick={onEdit}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 text-xs font-bold text-on-surface-variant hover:text-primary hover:border-primary/40 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:text-primary hover:border-primary/40 transition-all"
         >
           <span className="material-symbols-outlined text-sm">edit</span>
-          Edit
+          Update
         </button>
       </div>
       <div className="p-5">{children}</div>
@@ -46,294 +44,216 @@ function SectionReviewCard({
 
 function DataRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex gap-2">
-      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest shrink-0 w-36">{label}</span>
-      <span className="text-sm text-on-surface font-medium">{value || <span className="text-on-surface-variant/40 italic text-xs">Not provided</span>}</span>
+    <div className="flex gap-2 py-0.5">
+      <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest shrink-0 w-32">{label}</span>
+      <span className="text-sm text-on-surface font-semibold truncate">{value || <span className="text-on-surface-variant/30 italic text-xs font-normal">Not provided</span>}</span>
     </div>
   );
 }
 
 function PartyChip({ label, color }: { label: string; color: string }) {
-  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white uppercase tracking-wide ${color}`}>{label}</span>;
+  return <span className={`text-[9px] font-black px-2 py-0.5 rounded-full text-white uppercase tracking-wider ${color}`}>{label}</span>;
 }
 
 export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmit, submitting, isResubmit, queryDescription }: Props) {
-  const photoCount = [photos.frontView, photos.leftSideView, photos.rightSideView, photos.backView].filter(Boolean).length
-    + photos.others.filter(Boolean).length;
+  const photoCount = Object.values(photos).filter(v => v instanceof File).length 
+    + photos.others.filter(v => v instanceof File).length;
 
   const kycVerifiedDocs = Object.values(formData.kycDocuments).filter(
     d => d.applicantChecked || d.coApplicantChecked || d.guarantorChecked
   ).length;
 
-  const preSanctionChecked = Object.entries(formData.preSanctionDocs).filter(
-    ([k, v]) => k !== 'othersText' && v === true
-  ).length;
-
-  const postDisburseChecked = Object.entries(formData.postDisbursementDocs).filter(
-    ([k, v]) => k !== 'othersText' && v === true
-  ).length;
+  const formatCurrency = (val: string | number) => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num || 0);
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
       {/* Admin Query Banner */}
       {isResubmit && queryDescription && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <span className="material-symbols-outlined text-amber-500 text-xl mt-0.5">warning</span>
+        <div className="flex items-start gap-4 p-5 bg-amber-50 border-l-4 border-amber-400 rounded-xl shadow-sm">
+          <span className="material-symbols-outlined text-amber-500 text-2xl">warning</span>
           <div>
-            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1">Admin Query — Please Fix & Resubmit</p>
-            <p className="text-sm text-amber-900 italic">{queryDescription}</p>
+            <p className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-1">Attention: Query Details</p>
+            <p className="text-sm text-amber-900 font-medium italic leading-relaxed">{queryDescription}</p>
           </div>
         </div>
       )}
 
       {/* Review Header */}
-      <div className="text-center py-4">
+      <div className="text-center py-6 bg-accent/5 rounded-2xl border border-accent/10">
         <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${
-          isResubmit ? 'bg-amber-100 border-2 border-amber-300' : 'bg-accent/10 border-2 border-accent/30'
+          isResubmit ? 'bg-amber-100 border-2 border-amber-300 shadow-lg shadow-amber-200/50' : 'bg-accent/10 border-2 border-accent/30 shadow-lg shadow-accent/20'
         }`}>
-          <span className={`material-symbols-outlined text-3xl ${isResubmit ? 'text-amber-500' : 'text-accent'}`}>
-            {isResubmit ? 'rate_review' : 'preview'}
+          <span className={`material-symbols-outlined text-3xl ${isResubmit ? 'text-amber-600' : 'text-accent'}`}>
+            {isResubmit ? 'rate_review' : 'fact_check'}
           </span>
         </div>
-        <h3 className="text-xl font-extrabold font-[var(--font-headline)] text-on-surface">
-          {isResubmit ? 'Fix & Resubmit Application' : 'Review Application'}
+        <h3 className="text-xl font-black font-[var(--font-headline)] text-on-surface uppercase tracking-tight">
+          {isResubmit ? 'Resubmission Review' : 'Application Review'}
         </h3>
-        <p className="text-sm text-on-surface-variant mt-1">
-          {isResubmit
-            ? 'Edit the sections that need to be fixed, then resubmit the application.'
-            : 'Please review all sections carefully before submitting.'}
+        <p className="text-sm text-on-surface-variant mt-1 font-medium italic">
+          {isResubmit ? 'Update the necessary sections and verify before resending.' : 'Verify all details for the vehicle loan application.'}
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Form No.', value: formData.applicationFormNo, icon: 'tag' },
-          { label: 'Date', value: formData.applicationDate, icon: 'calendar_today' },
-          { label: 'Photos', value: `${photoCount} uploaded`, icon: 'photo_camera' },
-          { label: 'KYC Docs', value: `${kycVerifiedDocs}/9 verified`, icon: 'badge' },
-        ].map(stat => (
-          <div key={stat.label} className="bg-surface-container rounded-xl p-3 text-center">
-            <span className="material-symbols-outlined text-accent text-xl mb-1 block">{stat.icon}</span>
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{stat.label}</p>
-            <p className="text-sm font-bold text-on-surface mt-0.5">{stat.value}</p>
+      <div className="space-y-6">
+        {/* Section 1: Primary Details */}
+        <SectionReviewCard sectionNo={1} title="Primary Details" icon="person_outline" onEdit={() => onEdit(1)}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { party: 'Applicant', data: formData.applicantPersonal, contact: formData.applicantContact, color: 'bg-primary' },
+              { party: 'Co-Applicant', data: formData.coApplicantPersonal, contact: formData.coApplicantContact, color: 'bg-secondary' },
+              { party: 'Guarantor', data: formData.guarantorPersonal, contact: formData.guarantorContact, color: 'bg-tertiary' },
+            ].map(({ party, data, contact, color }) => (
+              <div key={party} className="bg-surface-container rounded-xl p-4 space-y-3 border border-outline-variant/10">
+                <PartyChip label={party} color={color} />
+                <div className="space-y-1">
+                  <p className="text-sm font-black text-on-surface uppercase tracking-tight">{data.firstName || '—'}</p>
+                  <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">S/O-D/O: {data.fatherFirstName || '—'}</p>
+                  <p className="text-xs font-black text-accent mt-2">{contact.mobile || '—'}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </SectionReviewCard>
+
+        {/* Section 2: KYC Verification */}
+        <SectionReviewCard sectionNo={2} title="KYC Verification" icon="verified_user" onEdit={() => onEdit(2)}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             {[
+               { party: 'Applicant', aadhaar: formData.kycDocuments.aadhaarCard.applicantDocNo, pan: formData.kycDocuments.panCard.applicantDocNo },
+               { party: 'Co-Applicant', aadhaar: formData.kycDocuments.aadhaarCard.coApplicantDocNo, pan: formData.kycDocuments.panCard.coApplicantDocNo },
+               { party: 'Guarantor', aadhaar: formData.kycDocuments.aadhaarCard.guarantorDocNo, pan: formData.kycDocuments.panCard.guarantorDocNo },
+             ].map(({ party, aadhaar, pan }) => (
+               <div key={party} className="p-3 bg-surface-container rounded-xl border border-outline-variant/10">
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 border-b border-outline-variant/20 pb-1">{party}</p>
+                  <DataRow label="Aadhaar" value={aadhaar} />
+                  <DataRow label="PAN" value={pan} />
+               </div>
+             ))}
+          </div>
+        </SectionReviewCard>
+
+        {/* Section 3: Loan Details */}
+        <SectionReviewCard sectionNo={3} title="Loan Details" icon="payments" onEdit={() => onEdit(3)}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-surface-container rounded-xl p-3 border border-outline-variant/5">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Principal</p>
+              <p className="text-sm font-black text-accent">{formatCurrency(formData.loanDetails.loanAmount)}</p>
+            </div>
+            <div className="bg-surface-container rounded-xl p-3">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Tenure</p>
+              <p className="text-sm font-bold text-on-surface">{formData.loanDetails.tenure || '0'} M</p>
+            </div>
+            <div className="bg-surface-container rounded-xl p-3">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Rate</p>
+              <p className="text-sm font-bold text-on-surface">{formData.loanDetails.interestRate || '0'}%</p>
+            </div>
+            <div className="bg-surface-container rounded-xl p-3 border border-outline-variant/5">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Monthly EMI</p>
+              <p className="text-sm font-black text-accent">{formatCurrency(formData.loanDetails.emi)}</p>
+            </div>
+          </div>
+        </SectionReviewCard>
+
+        {/* Section 10: Vehicle Photos */}
+        <SectionReviewCard sectionNo={10} title="Vehicle Photos & ID" icon="photo_camera" onEdit={() => onEdit(10)}>
+          <div className="space-y-6">
+            <div>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3">Party Identification</p>
+              <div className="flex gap-4">
+                {[
+                  { label: 'Applicant', file: photos.applicantPhoto },
+                  { label: 'Co-Applicant', file: photos.coApplicantPhoto },
+                  { label: 'Guarantor', file: photos.guarantorPhoto },
+                ].map(({ label, file }) => (
+                  <div key={label} className={`flex flex-col items-center gap-2 p-2 rounded-xl border ${file ? 'border-accent/30 bg-accent/5' : 'border-dashed border-outline-variant/30'}`}>
+                    <div className="w-12 h-16 rounded-lg bg-surface-container-high flex items-center justify-center overflow-hidden">
+                       {file ? (
+                         <img 
+                           src={URL.createObjectURL(file)} 
+                           className="w-full h-full object-cover" 
+                           onLoad={(e) => URL.revokeObjectURL(e.currentTarget.src)}
+                         />
+                       ) : (
+                         <span className="material-symbols-outlined text-lg text-on-surface-variant/30">person</span>
+                       )}
+                    </div>
+                    <span className="text-[9px] font-black text-on-surface uppercase tracking-tighter">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3">Inspection Views</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Front', file: photos.frontView },
+                  { label: 'Back', file: photos.backView },
+                  { label: 'Left', file: photos.leftSideView },
+                  { label: 'Right', file: photos.rightSideView },
+                  ...photos.others.filter(Boolean).map((f, i) => ({ label: `Extra ${i + 1}`, file: f })),
+                ].map(({ label, file }) => (
+                  <div key={label} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wide ${file ? 'border-accent/40 bg-accent/10 text-accent' : 'border-error/20 bg-error/5 text-error'}`}>
+                    <span className="material-symbols-outlined text-xs">{file ? 'check_circle' : 'cancel'}</span>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionReviewCard>
+
+        {/* Section 11: Documents */}
+        <SectionReviewCard sectionNo={11} title="Document Checklist" icon="checklist" onEdit={() => onEdit(11)}>
+          <div className="flex items-center gap-4 text-sm font-black text-on-surface-variant py-2">
+             <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-accent">verified</span>
+                <span>{kycVerifiedDocs} Records Verified</span>
+             </div>
+             <div className="w-1.5 h-1.5 rounded-full bg-outline-variant" />
+             <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-accent">description</span>
+                <span>Checklist Certified</span>
+             </div>
+          </div>
+        </SectionReviewCard>
       </div>
 
-      {/* Section 1 */}
-      <SectionReviewCard sectionNo={1} title="Application Info" icon="assignment" onEdit={() => onEdit(1)}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <DataRow label="Form No." value={formData.applicationFormNo} />
-          <DataRow label="Date" value={formData.applicationDate} />
-          <DataRow label="UDYAM Reg. No." value={formData.udyamRegNo} />
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          {[
-            { party: 'Applicant', type: formData.applicantEntityType, color: 'bg-primary' },
-            { party: 'Co-Applicant', type: formData.coApplicantEntityType, color: 'bg-secondary' },
-            { party: 'Guarantor', type: formData.guarantorEntityType, color: 'bg-tertiary' },
-          ].map(({ party, type, color }) => (
-            <div key={party} className="bg-surface-container rounded-xl p-3 text-center">
-              <PartyChip label={party} color={color} />
-              <p className="text-xs font-bold text-on-surface mt-2">{type || '—'}</p>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 2 */}
-      <SectionReviewCard sectionNo={2} title="Personal Details" icon="person" onEdit={() => onEdit(2)}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { party: 'Applicant', data: formData.applicantPersonal, color: 'bg-primary' },
-            { party: 'Co-Applicant', data: formData.coApplicantPersonal, color: 'bg-secondary' },
-            { party: 'Guarantor', data: formData.guarantorPersonal, color: 'bg-tertiary' },
-          ].map(({ party, data, color }) => (
-            <div key={party} className="bg-surface-container rounded-xl p-3">
-              <PartyChip label={party} color={color} />
-              <div className="mt-2 space-y-1.5">
-                <p className="text-sm font-bold text-on-surface">
-                  {[data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ') || '—'}
-                </p>
-                <p className="text-xs text-on-surface-variant">{data.gender || '—'} &bull; {data.dob || '—'}</p>
-                {data.religion && (
-                  <p className="text-[10px] text-on-surface-variant">Religion: {data.religion}{data.religionOther && ` (${data.religionOther})`}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 3 */}
-      <SectionReviewCard sectionNo={3} title="Address & Contact" icon="location_on" onEdit={() => onEdit(3)}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { party: 'Applicant', data: formData.applicantContact, color: 'bg-primary' },
-            { party: 'Co-Applicant', data: formData.coApplicantContact, color: 'bg-secondary' },
-            { party: 'Guarantor', data: formData.guarantorContact, color: 'bg-tertiary' },
-          ].map(({ party, data, color }) => (
-            <div key={party} className="bg-surface-container rounded-xl p-3">
-              <PartyChip label={party} color={color} />
-              <div className="mt-2 space-y-1.5">
-                <p className="text-xs text-on-surface">{data.communicationAddress.fullAddress || '—'}</p>
-                <p className="text-xs text-on-surface-variant">{data.communicationAddress.city}, {data.communicationAddress.state} {data.communicationAddress.pinCode}</p>
-                <p className="text-xs font-bold text-on-surface">{data.mobile || '—'}</p>
-                {data.email && <p className="text-xs text-on-surface-variant">{data.email}</p>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 4 */}
-      <SectionReviewCard sectionNo={4} title="Residence Info" icon="home" onEdit={() => onEdit(4)}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { party: 'Applicant', data: formData.applicantResidence, color: 'bg-primary' },
-            { party: 'Co-Applicant', data: formData.coApplicantResidence, color: 'bg-secondary' },
-            { party: 'Guarantor', data: formData.guarantorResidence, color: 'bg-tertiary' },
-          ].map(({ party, data, color }) => (
-            <div key={party} className="bg-surface-container rounded-xl p-3">
-              <PartyChip label={party} color={color} />
-              <div className="mt-2 space-y-1">
-                <DataRow label="Residence" value={data.residence} />
-                <DataRow label="Marital Status" value={data.maritalStatus} />
-                <DataRow label="Education" value={data.education} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 5 */}
-      <SectionReviewCard sectionNo={5} title="Bank Details" icon="account_balance" onEdit={() => onEdit(5)}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { party: 'Applicant', data: formData.applicantBank, color: 'bg-primary' },
-            { party: 'Co-Applicant', data: formData.coApplicantBank, color: 'bg-secondary' },
-          ].map(({ party, data, color }) => (
-            <div key={party} className="bg-surface-container rounded-xl p-3">
-              <PartyChip label={party} color={color} />
-              <div className="mt-2 space-y-1">
-                <p className="text-sm font-bold text-on-surface">{data.bankName || '—'}</p>
-                <p className="text-xs text-on-surface-variant">{data.branch || 'Branch N/A'}</p>
-                <p className="text-xs text-on-surface-variant">A/C: {data.accountNo || '—'} &bull; {data.accountType || '—'}</p>
-                <p className="text-xs text-on-surface-variant">IFSC: {data.ifscCode || '—'}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 6 */}
-      <SectionReviewCard sectionNo={6} title="Employment Details" icon="work" onEdit={() => onEdit(6)}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { party: 'Applicant', data: formData.applicantEmployment, color: 'bg-primary' },
-            { party: 'Co-Applicant', data: formData.coApplicantEmployment, color: 'bg-secondary' },
-          ].map(({ party, data, color }) => (
-            <div key={party} className="bg-surface-container rounded-xl p-3">
-              <PartyChip label={party} color={color} />
-              <div className="mt-2 space-y-1">
-                <p className="text-sm font-bold text-on-surface">{data.establishmentName || '—'}</p>
-                <p className="text-xs text-on-surface-variant">{data.designation || 'Designation N/A'}</p>
-                <p className="text-xs text-on-surface-variant">{data.yearsOfEmployment ? `${data.yearsOfEmployment} years` : '—'} &bull; CTC: ₹{data.ctcPerAnnum ? parseInt(data.ctcPerAnnum).toLocaleString('en-IN') : '—'}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 7 */}
-      <SectionReviewCard sectionNo={7} title="Property Details" icon="real_estate_agent" onEdit={() => onEdit(7)}>
-        <div className="space-y-3">
-          <p className="text-xs text-on-surface-variant">
-            Applicant vehicles: {formData.applicantVehiclesOwned.filter(v => v.vehicle).length} declared &bull;
-            Co-Applicant vehicles: {formData.coApplicantVehiclesOwned.filter(v => v.vehicle).length} declared
-          </p>
-          {formData.movablePropertyDescription && (
-            <DataRow label="Movable Assets" value={`${formData.movablePropertyDescription} — ₹${parseInt(formData.movablePropertyValue || '0').toLocaleString('en-IN')}`} />
-          )}
-          <p className="text-xs text-on-surface-variant">
-            Immovable properties: {formData.immovableProperties.filter(p => p.assetType).length} declared
-          </p>
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 8 */}
-      <SectionReviewCard sectionNo={8} title="Vehicle Photos" icon="photo_camera" onEdit={() => onEdit(8)}>
-        {isResubmit && photoCount === 0 && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-700">
-            <span className="material-symbols-outlined text-base">info</span>
-            <p className="text-xs font-medium">Please re-upload all vehicle photos. (For security, photos are not stored on the server for queried applications)</p>
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'Front', file: photos.frontView },
-            { label: 'Left Side', file: photos.leftSideView },
-            { label: 'Right Side', file: photos.rightSideView },
-            { label: 'Back', file: photos.backView },
-            ...photos.others.filter(Boolean).map((f, i) => ({ label: `Other ${i + 1}`, file: f })),
-          ].map(({ label, file }) => (
-            <div key={label} className={`text-center px-3 py-2 rounded-xl text-xs font-bold ${
-              file ? 'bg-accent/10 text-accent' : 'bg-error/10 text-error'
-            }`}>
-              <span className="material-symbols-outlined text-base block mb-0.5" style={file ? { fontVariationSettings: "'FILL' 1" } : {}}>
-                {file ? 'check_circle' : 'cancel'}
-              </span>
-              {label}
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Section 9 */}
-      <SectionReviewCard sectionNo={9} title="Document Checklist" icon="checklist" onEdit={() => onEdit(9)}>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          {[
-            { label: 'KYC Documents Verified', value: `${kycVerifiedDocs}/9`, ok: kycVerifiedDocs > 0 },
-            { label: 'Pre-Sanction Docs', value: `${preSanctionChecked} checked`, ok: preSanctionChecked > 0 },
-            { label: 'Post-Disbursement Docs', value: `${postDisburseChecked} checked`, ok: postDisburseChecked > 0 },
-          ].map(({ label, value, ok }) => (
-            <div key={label} className={`rounded-xl p-3 border ${ok ? 'bg-accent/5 border-accent/20' : 'bg-surface-container border-outline-variant/20'}`}>
-              <span className={`material-symbols-outlined text-xl block mb-1 ${ok ? 'text-accent' : 'text-on-surface-variant'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                {ok ? 'check_circle' : 'radio_button_unchecked'}
-              </span>
-              <p className={`text-xs font-bold ${ok ? 'text-accent' : 'text-on-surface-variant'}`}>{value}</p>
-              <p className="text-[10px] text-on-surface-variant mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-      </SectionReviewCard>
-
-      {/* Final Submit Buttons */}
-      <div className="border-t border-outline-variant/20 pt-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
+      {/* Navigation Buttons */}
+      <div className="border-t border-outline-variant/20 pt-8 mt-10 flex flex-col sm:flex-row gap-4 items-center justify-between">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-surface-container text-on-surface-variant font-bold text-sm hover:bg-surface-container-high transition-all"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-surface-container text-on-surface-variant font-black text-[11px] uppercase tracking-widest hover:bg-surface-container-high transition-all"
         >
           <span className="material-symbols-outlined text-lg">arrow_back</span>
-          Go Back &amp; Edit
+          Cancel & Edit
         </button>
 
         <button
           type="button"
           onClick={onSubmit}
           disabled={submitting}
-          className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-xl disabled:opacity-50 active:scale-95 ${
-            isResubmit
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-200'
-              : 'bg-gradient-to-r from-accent to-on-primary-container text-white shadow-accent/20'
+          className={`w-full sm:w-auto flex items-center justify-center gap-3 px-12 py-5 font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl transition-all disabled:opacity-50 active:scale-95 ${
+            isResubmit 
+            ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-200' 
+            : 'bg-gradient-to-r from-accent to-on-primary-container text-white shadow-accent/20 shadow-lg'
           }`}
         >
-          <span className="material-symbols-outlined text-lg">
-            {submitting ? 'progress_activity' : isResubmit ? 'replay' : 'send'}
-          </span>
-          {submitting ? (isResubmit ? 'Resubmitting...' : 'Submitting...') : isResubmit ? 'Resubmit Application' : 'Confirm & Submit Application'}
+          {submitting ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined font-black">{isResubmit ? 'replay' : 'verified'}</span>
+              {isResubmit ? 'Resubmit Application' : 'Authorize & Submit'}
+            </>
+          )}
         </button>
       </div>
     </div>

@@ -26,6 +26,8 @@ dist-ssr
 # Environment variables
 .env
 .env.*
+!.env.example
+!backend/.env.example
 
 # frontend specific
 frontend/.next
@@ -38,3 +40,14 @@ backend/dist
 backend/build
 backend/coverage
 backend/.env
+backend/uploads/
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# local dumps and generated project snapshots
+FULL_PROJECT_SOURCE.txt
+dump.js
+dump_source.ps1
+
+# local agent/tooling scratch files
+.claude/

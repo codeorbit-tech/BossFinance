@@ -20,6 +20,14 @@ export const SAMPLE_FORM_DATA: VehicleLoanFormData = {
   guarantorCkycId: 'CKYC2024005678',
   guarantorGstin: '',
 
+  // Loan Details
+  loanDetails: {
+    loanAmount: '500000',
+    tenure: '36',
+    interestRate: '12',
+    emi: '16607',
+  },
+
   // Section 2
   applicantPersonal: {
     firstName: 'Rajesh', middleName: 'Kumar', lastName: 'Sharma',

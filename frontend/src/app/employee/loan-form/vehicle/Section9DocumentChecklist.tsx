@@ -88,33 +88,6 @@ function KycCheckCell({
   );
 }
 
-function SimpleRadio({
-  checked,
-  onChange,
-  label,
-  name
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  name: string;
-}) {
-  return (
-    <label className="flex items-start gap-3 cursor-pointer group py-3 border-b border-outline-variant/10 last:border-0">
-      <div
-        onClick={() => onChange(true)}
-        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 mt-0.5 transition-all ${
-          checked ? 'bg-accent border-accent' : 'border-outline-variant group-hover:border-accent/60'
-        }`}
-      >
-        {checked && (
-          <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1", fontSize: '10px' }}>check</span>
-        )}
-      </div>
-      <span className="text-sm text-on-surface leading-relaxed">{label}</span>
-    </label>
-  );
-}
 
 function SimpleCheckbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -129,6 +102,21 @@ function SimpleCheckbox({ checked, onChange, label }: { checked: boolean; onChan
           <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1", fontSize: '10px' }}>check</span>
         )}
       </div>
+      <span className="text-sm text-on-surface leading-relaxed">{label}</span>
+    </label>
+  );
+}
+
+function SimpleRadio({ checked, onChange, label, name }: { checked: boolean; onChange: () => void; label: string; name: string }) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer group py-3 border-b border-outline-variant/10 last:border-0">
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onChange}
+        className="mt-0.5 accent-accent flex-shrink-0"
+      />
       <span className="text-sm text-on-surface leading-relaxed">{label}</span>
     </label>
   );

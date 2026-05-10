@@ -14,29 +14,34 @@ import {
   emptyVehicleOwned,
   emptyImmovable,
   emptyKycDoc,
+  emptyLoanDetails,
 } from './types';
 import Section1AppInfo from './Section1AppInfo';
-import Section2PersonalDetails from './Section2PersonalDetails';
-import Section3AddressContact from './Section3AddressContact';
-import Section4ResidenceInfo from './Section4ResidenceInfo';
-import Section5BankDetails from './Section5BankDetails';
-import Section6EmploymentDetails from './Section6EmploymentDetails';
-import Section7PropertyDetails from './Section7PropertyDetails';
-import Section8VehiclePhotos from './Section8VehiclePhotos';
-import Section9DocumentChecklist from './Section9DocumentChecklist';
+import Section2KycVerification from './Section2KycVerification';
+import Section3LoanDetails from './Section2LoanDetails';
+import Section4PersonalDetails from './Section3PersonalDetails';
+import Section5AddressContact from './Section4AddressContact';
+import Section6ResidenceInfo from './Section5ResidenceInfo';
+import Section7BankDetails from './Section6BankDetails';
+import Section8EmploymentDetails from './Section7EmploymentDetails';
+import Section9PropertyDetails from './Section8PropertyDetails';
+import Section10VehiclePhotos from './Section9VehiclePhotos';
+import Section11DocumentChecklist from './Section10DocumentChecklist';
 import ReviewScreen from './ReviewScreen';
 import { customersApi, loansApi } from '@/lib/api';
 
 const SECTIONS = [
-  { id: 1, label: 'Application Info', icon: 'assignment' },
-  { id: 2, label: 'Personal Details', icon: 'person' },
-  { id: 3, label: 'Address & Contact', icon: 'location_on' },
-  { id: 4, label: 'Residence Info', icon: 'home' },
-  { id: 5, label: 'Bank Details', icon: 'account_balance' },
-  { id: 6, label: 'Employment', icon: 'work' },
-  { id: 7, label: 'Property Details', icon: 'real_estate_agent' },
-  { id: 8, label: 'Vehicle Photos', icon: 'photo_camera' },
-  { id: 9, label: 'Documents', icon: 'checklist' },
+  { id: 1, label: 'Primary Details', icon: 'person_outline' },
+  { id: 2, label: 'KYC Verification', icon: 'verified_user' },
+  { id: 3, label: 'Loan Details', icon: 'payments' },
+  { id: 4, label: 'Personal Details', icon: 'person' },
+  { id: 5, label: 'Address & Contact', icon: 'location_on' },
+  { id: 6, label: 'Residence Info', icon: 'home' },
+  { id: 7, label: 'Bank Details', icon: 'account_balance' },
+  { id: 8, label: 'Employment', icon: 'work' },
+  { id: 9, label: 'Property Details', icon: 'real_estate_agent' },
+  { id: 10, label: 'Vehicle Photos', icon: 'photo_camera' },
+  { id: 11, label: 'Documents', icon: 'checklist' },
 ];
 
 function generateFormNo(): string {
@@ -59,6 +64,8 @@ const initialFormData = (): VehicleLoanFormData => ({
   coApplicantGstin: '',
   guarantorCkycId: '',
   guarantorGstin: '',
+
+  loanDetails: emptyLoanDetails(),
 
   applicantPersonal: emptyPersonal(),
   coApplicantPersonal: emptyPersonal(),
@@ -107,6 +114,9 @@ const initialFormData = (): VehicleLoanFormData => ({
 });
 
 const initialPhotos = (): PhotoUploads => ({
+  applicantPhoto: null,
+  coApplicantPhoto: null,
+  guarantorPhoto: null,
   frontView: null,
   leftSideView: null,
   rightSideView: null,
@@ -118,42 +128,34 @@ const initialPhotos = (): PhotoUploads => ({
 function validateSection(section: number, data: VehicleLoanFormData, photos: PhotoUploads): string[] {
   const errors: string[] = [];
   if (section === 1) {
-    if (!data.applicationDate) errors.push('Application Date is required.');
-    if (!data.applicantEntityType) errors.push('Applicant Entity Type is required.');
-    if (!data.coApplicantEntityType) errors.push('Co-Applicant Entity Type is required.');
-    if (!data.guarantorEntityType) errors.push('Guarantor Entity Type is required.');
+    if (!data.applicantPersonal.firstName) errors.push('Applicant Name is required.');
+    if (!data.applicantPersonal.fatherFirstName) errors.push('Husband/Father Name is required.');
+    if (!data.applicantContact.mobile) errors.push('Applicant Phone Number is required.');
   }
   if (section === 2) {
-    if (!data.applicantPersonal.firstName) errors.push('Applicant First Name is required.');
-    if (!data.applicantPersonal.gender) errors.push('Applicant Gender is required.');
-    if (!data.applicantPersonal.dob) errors.push('Applicant Date of Birth is required.');
-    if (!data.coApplicantPersonal.firstName) errors.push('Co-Applicant First Name is required.');
-    if (!data.guarantorPersonal.firstName) errors.push('Guarantor First Name is required.');
+    if (!data.kycDocuments.aadhaarCard.applicantDocNo) errors.push('Applicant Aadhaar No. is required.');
+    if (!data.kycDocuments.panCard.applicantDocNo) errors.push('Applicant PAN No. is required.');
   }
   if (section === 3) {
-    if (!data.applicantContact.communicationAddress.fullAddress) errors.push('Applicant Communication Address is required.');
-    if (!data.applicantContact.mobile) errors.push('Applicant Mobile No. is required.');
-    if (!data.coApplicantContact.communicationAddress.fullAddress) errors.push('Co-Applicant Communication Address is required.');
-    if (!data.coApplicantContact.mobile) errors.push('Co-Applicant Mobile No. is required.');
-    if (!data.guarantorContact.communicationAddress.fullAddress) errors.push('Guarantor Communication Address is required.');
-    if (!data.guarantorContact.mobile) errors.push('Guarantor Mobile No. is required.');
+    if (!data.loanDetails.loanAmount) errors.push('Loan Amount is required.');
+    if (!data.loanDetails.tenure) errors.push('Tenure is required.');
+    if (!data.loanDetails.interestRate) errors.push('Interest Rate is required.');
   }
   if (section === 4) {
-    if (!data.applicantResidence.residence) errors.push('Applicant Residence type is required.');
-    if (!data.applicantResidence.maritalStatus) errors.push('Applicant Marital Status is required.');
+    if (!data.applicantPersonal.gender) errors.push('Applicant Gender is required.');
+    if (!data.applicantPersonal.dob) errors.push('Applicant DOB is required.');
   }
-  if (section === 5) {
+  if (section === 7) {
     if (!data.applicantBank.bankName) errors.push('Applicant Bank Name is required.');
     if (!data.applicantBank.accountNo) errors.push('Applicant Account No. is required.');
   }
-  if (section === 6) {
+  if (section === 8) {
     if (!data.applicantEmployment.establishmentName) errors.push('Applicant Establishment Name is required.');
   }
-  if (section === 8) {
-    if (!photos.frontView) errors.push('Front View photo is mandatory.');
-    if (!photos.leftSideView) errors.push('Left Side View photo is mandatory.');
-    if (!photos.rightSideView) errors.push('Right Side View photo is mandatory.');
-    if (!photos.backView) errors.push('Back View photo is mandatory.');
+  if (section === 10) {
+    if (!photos.applicantPhoto) errors.push('Applicant Portrait Photo is mandatory.');
+    if (!photos.frontView) errors.push('Vehicle Front View is mandatory.');
+    if (!photos.backView) errors.push('Vehicle Back View is mandatory.');
   }
   return errors;
 }
@@ -229,7 +231,7 @@ export default function VehicleLoanForm() {
             }
 
             // Mark all sections as completed and go directly to review screen
-            setCompletedSections([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            setCompletedSections([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
             setShowReview(true);
             if (loan.queryDescription) {
               setQueryDescription(loan.queryDescription);
@@ -261,7 +263,7 @@ export default function VehicleLoanForm() {
     }
     setErrors([]);
     setCompletedSections(prev => prev.includes(currentSection) ? prev : [...prev, currentSection]);
-    if (currentSection < 9) {
+    if (currentSection < 11) {
       setCurrentSection(currentSection + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -316,11 +318,7 @@ export default function VehicleLoanForm() {
         formData.guarantorPersonal.lastName
       ].filter(Boolean).join(' ');
 
-      let vehicleValue = 0;
-      if (formData.applicantVehiclesOwned[0] && formData.applicantVehiclesOwned[0].declaredValue) {
-        const parsed = parseFloat(formData.applicantVehiclesOwned[0].declaredValue);
-        vehicleValue = isNaN(parsed) ? 0 : parsed;
-      }
+      const loanAmountValue = parseFloat(formData.loanDetails.loanAmount) || 0;
 
       let loanId = editId;
 
@@ -344,7 +342,7 @@ export default function VehicleLoanForm() {
 
         // 2. Resubmit Loan
         await loansApi.resubmit(editId, {
-          amount: vehicleValue,
+          amount: loanAmountValue,
           purpose: 'Vehicle Purchase/Refinance',
           fullData: formData
         });
@@ -367,10 +365,10 @@ export default function VehicleLoanForm() {
         const loanRes = await loansApi.create({
           customerId,
           loanType: 'VEHICLE',
-          amount: vehicleValue,
-          tenure: 12,
-          interestRate: 0,
-          emi: 0,
+          amount: loanAmountValue,
+          tenure: parseInt(formData.loanDetails.tenure) || 12,
+          interestRate: parseFloat(formData.loanDetails.interestRate) || 0,
+          emi: parseFloat(formData.loanDetails.emi) || 0,
           frequency: 'MONTHLY',
           purpose: 'Vehicle Purchase/Refinance',
           guarantorName,
@@ -394,6 +392,41 @@ export default function VehicleLoanForm() {
         }
       }
 
+      // 5. Generate ZIP folder with PDF and all uploaded documents
+      try {
+        const JSZip = (await import('jszip')).default;
+        const { saveAs } = await import('file-saver');
+        const zip = new JSZip();
+        
+        // Add PDF
+        zip.file(fileName, blob);
+        
+        // Add all photos
+        const safeName = (fullName || 'Applicant').replace(/[^a-z0-9]/gi, '_');
+        const folderName = `Application_${formData.applicationFormNo}_${safeName}`;
+        const docsFolder = zip.folder(folderName);
+        
+        if (docsFolder) {
+          Object.entries(photos).forEach(([key, value]) => {
+            if (value instanceof File) {
+              docsFolder.file(`${key}_${value.name}`, value);
+            } else if (key === 'others' && Array.isArray(value)) {
+              value.forEach((file, idx) => {
+                if (file instanceof File) {
+                  docsFolder.file(`other_${idx}_${file.name}`, file);
+                }
+              });
+            }
+          });
+        }
+        
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        saveAs(zipBlob, `${folderName}.zip`);
+      } catch (zipErr) {
+        console.error('ZIP generation failed:', zipErr);
+        toast.error('Application saved, but ZIP download failed.', { id: toastId });
+      }
+
       toast.success(editId ? 'Application resubmitted successfully!' : 'Application submitted successfully!', { id: toastId });
       setSubmitting(false);
       setPdfPreview({ url, fileName });
@@ -412,6 +445,13 @@ export default function VehicleLoanForm() {
       coApplicantEntityType: 'Individual',
       guarantorEntityType: 'Individual',
       
+      loanDetails: {
+        loanAmount: '500000',
+        tenure: '24',
+        interestRate: '12',
+        emi: '25833.33'
+      },
+
       applicantPersonal: {
         firstName: 'John', middleName: 'A.', lastName: 'Doe',
         gender: 'Male', dob: '1985-05-15',
@@ -483,6 +523,9 @@ export default function VehicleLoanForm() {
 
     const createDummyFile = (name: string) => new File(["dummy image content"], name, { type: "image/jpeg" });
     setPhotos({
+      applicantPhoto: createDummyFile("applicant.jpg"),
+      coApplicantPhoto: createDummyFile("co_applicant.jpg"),
+      guarantorPhoto: createDummyFile("guarantor.jpg"),
       frontView: createDummyFile("front_view.jpg"),
       leftSideView: createDummyFile("left_side.jpg"),
       rightSideView: createDummyFile("right_side.jpg"),
@@ -672,7 +715,7 @@ export default function VehicleLoanForm() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                  Section {currentSection} of 9
+                  Section {currentSection} of 11
                 </p>
                 <h3 className="text-lg font-bold text-on-surface font-[var(--font-headline)]">
                   {SECTIONS[currentSection - 1].label}
@@ -683,16 +726,18 @@ export default function VehicleLoanForm() {
             {/* Section Body */}
             <div className="p-6 lg:p-8">
               {currentSection === 1 && <Section1AppInfo {...sectionProps} />}
-              {currentSection === 2 && <Section2PersonalDetails {...sectionProps} />}
-              {currentSection === 3 && <Section3AddressContact {...sectionProps} />}
-              {currentSection === 4 && <Section4ResidenceInfo {...sectionProps} />}
-              {currentSection === 5 && <Section5BankDetails {...sectionProps} />}
-              {currentSection === 6 && <Section6EmploymentDetails {...sectionProps} />}
-              {currentSection === 7 && <Section7PropertyDetails {...sectionProps} />}
-              {currentSection === 8 && (
-                <Section8VehiclePhotos photos={photos} setPhotos={setPhotos} errors={errors} />
+              {currentSection === 2 && <Section2KycVerification {...sectionProps} />}
+              {currentSection === 3 && <Section3LoanDetails {...sectionProps} />}
+              {currentSection === 4 && <Section4PersonalDetails {...sectionProps} />}
+              {currentSection === 5 && <Section5AddressContact {...sectionProps} />}
+              {currentSection === 6 && <Section6ResidenceInfo {...sectionProps} />}
+              {currentSection === 7 && <Section7BankDetails {...sectionProps} />}
+              {currentSection === 8 && <Section8EmploymentDetails {...sectionProps} />}
+              {currentSection === 9 && <Section9PropertyDetails {...sectionProps} />}
+              {currentSection === 10 && (
+                <Section10VehiclePhotos photos={photos} setPhotos={setPhotos} errors={errors} />
               )}
-              {currentSection === 9 && <Section9DocumentChecklist {...sectionProps} />}
+              {currentSection === 11 && <Section11DocumentChecklist {...sectionProps} />}
             </div>
 
             {/* Navigation Footer */}
@@ -708,12 +753,12 @@ export default function VehicleLoanForm() {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-on-surface-variant font-medium">
-                  {currentSection} / 9 sections
+                  {currentSection} / 11 sections
                 </span>
                 <div className="h-1.5 w-24 bg-surface-container rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-accent to-primary rounded-full transition-all duration-500"
-                    style={{ width: `${(currentSection / 9) * 100}%` }}
+                    style={{ width: `${(currentSection / 11) * 100}%` }}
                   />
                 </div>
               </div>
@@ -722,9 +767,9 @@ export default function VehicleLoanForm() {
                 onClick={handleVerifyAndContinue}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm hover:opacity-90 transition-all shadow-md shadow-primary/20 active:scale-95"
               >
-                {currentSection === 9 ? 'Review Application' : 'Verify & Continue'}
+                {currentSection === 11 ? 'Review Application' : 'Verify & Continue'}
                 <span className="material-symbols-outlined text-lg">
-                  {currentSection === 9 ? 'preview' : 'arrow_forward'}
+                  {currentSection === 11 ? 'preview' : 'arrow_forward'}
                 </span>
               </button>
             </div>

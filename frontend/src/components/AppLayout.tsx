@@ -4,10 +4,12 @@ import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import { Toaster } from 'react-hot-toast';
 import { Suspense } from 'react';
+import PaymentNotifier from './PaymentNotifier';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-surface">
+      <PaymentNotifier />
       <Toaster
         position="top-right"
         toastOptions={{

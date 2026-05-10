@@ -1,11 +1,19 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get('/dashboard', authenticate, async (req, res) => {
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function endOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
+router.get('/dashboard', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const { period = 'monthly' } = req.query;
     const now = new Date();
@@ -48,8 +56,13 @@ router.get('/dashboard', authenticate, async (req, res) => {
       }),
       // Overdue Count
       prisma.loan.count({ where: { status: 'ACTIVE', nextDueDate: { lt: new Date() } } }),
-      // NPA Count (Placeholder logic: loans overdue by 90+ days)
-      prisma.loan.count({ where: { status: 'NPA' } })
+      // NPA Count (Filtered by frequency if specified)
+      prisma.loan.count({ 
+        where: { 
+          status: 'NPA',
+          ...(period && { frequency: period.toUpperCase() })
+        } 
+      })
     ]);
 
     const expected = expectedRes._sum.expectedAmount || 0;
@@ -72,7 +85,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
   }
 });
 
-router.get('/expense-tracker', authenticate, async (req, res) => {
+router.get('/expense-tracker', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -195,7 +208,138 @@ router.get('/employee', authenticate, async (req, res) => {
   }
 });
 
-router.get('/activity', authenticate, async (req, res) => {
+router.get('/employee/activity', authenticate, async (req, res) => {
+  try {
+    const employeeId = req.user.id;
+    const loans = await prisma.loan.findMany({
+      where: { createdById: employeeId },
+      take: 10,
+      orderBy: { updatedAt: 'desc' },
+      include: { customer: { select: { name: true, customerId: true } } }
+    });
+
+    const activities = loans.map(l => ({
+      id: `loan-${l.id}`,
+      action: l.status === 'ACTIVE' ? 'Loan approved' : l.status === 'QUERIED' ? 'Query received' : 'Application updated',
+      customer: `${l.customer.name} (${l.customer.customerId})`,
+      time: l.updatedAt,
+      icon: l.status === 'ACTIVE' ? 'check_circle' : l.status === 'QUERIED' ? 'help' : 'description',
+      color: l.status === 'ACTIVE' ? 'text-accent' : l.status === 'QUERIED' ? 'text-blue-600' : 'text-tertiary',
+      status: l.status
+    }));
+
+    res.json(activities);
+  } catch (err) {
+    console.error('Employee activity error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/employee/today-collection', authenticate, async (req, res) => {
+  try {
+    const employeeId = req.user.id;
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    
+    // For Weekly: current week (Sunday to Saturday)
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0,0,0,0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23,59,59,999);
+
+    // For Monthly: current month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const [installments, repayments] = await Promise.all([
+      prisma.installment.findMany({
+        where: { 
+          dueDate: { gte: monthStart, lte: monthEnd },
+          loan: { createdById: employeeId }
+        },
+        include: {
+          loan: {
+            include: { customer: { select: { name: true, customerId: true } } }
+          }
+        },
+        orderBy: { dueDate: 'asc' }
+      }),
+      prisma.repayment.findMany({
+        where: { 
+          paidAt: { gte: monthStart, lte: monthEnd }, 
+          status: 'SUCCESS',
+          loan: { createdById: employeeId }
+        },
+        include: { loan: { select: { frequency: true } } }
+      })
+    ]);
+
+    const summary = {
+      DAILY: { expected: 0, received: 0, remaining: 0, customers: [] },
+      WEEKLY: { expected: 0, received: 0, remaining: 0, customers: [] },
+      MONTHLY: { expected: 0, received: 0, remaining: 0, customers: [] }
+    };
+
+    // 1. DAILY TAB: Installments due TODAY for DAILY customers
+    installments.filter(i => i.loan.frequency === 'DAILY' && i.dueDate >= todayStart && i.dueDate <= todayEnd).forEach(inst => {
+      summary.DAILY.expected += inst.expectedAmount;
+      summary.DAILY.remaining += Math.max(0, inst.expectedAmount - inst.amountPaid);
+      summary.DAILY.customers.push({
+        id: inst.id, loanId: inst.loan.id, customerId: inst.loan.customer.customerId,
+        customerName: inst.loan.customer.name, amountDue: inst.expectedAmount,
+        amountPaid: inst.amountPaid, remaining: Math.max(0, inst.expectedAmount - inst.amountPaid),
+        status: inst.status
+      });
+    });
+    repayments.filter(r => r.loan?.frequency === 'DAILY' && r.paidAt >= todayStart && r.paidAt <= todayEnd).forEach(rep => {
+      summary.DAILY.received += rep.amount;
+    });
+
+    // 2. WEEKLY TAB: Installments due THIS WEEK for WEEKLY customers
+    installments.filter(i => i.loan.frequency === 'WEEKLY' && i.dueDate >= weekStart && i.dueDate <= weekEnd).forEach(inst => {
+      summary.WEEKLY.expected += inst.expectedAmount;
+      summary.WEEKLY.remaining += Math.max(0, inst.expectedAmount - inst.amountPaid);
+      if (inst.dueDate >= todayStart && inst.dueDate <= todayEnd) {
+        summary.WEEKLY.customers.push({
+          id: inst.id, loanId: inst.loan.id, customerId: inst.loan.customer.customerId,
+          customerName: inst.loan.customer.name, amountDue: inst.expectedAmount,
+          amountPaid: inst.amountPaid, remaining: Math.max(0, inst.expectedAmount - inst.amountPaid),
+          status: inst.status
+        });
+      }
+    });
+    repayments.filter(r => r.loan?.frequency === 'WEEKLY' && r.paidAt >= weekStart && r.paidAt <= weekEnd).forEach(rep => {
+      summary.WEEKLY.received += rep.amount;
+    });
+
+    // 3. MONTHLY TAB: Installments due THIS MONTH for MONTHLY customers
+    installments.filter(i => i.loan.frequency === 'MONTHLY' && i.dueDate >= monthStart && i.dueDate <= monthEnd).forEach(inst => {
+      summary.MONTHLY.expected += inst.expectedAmount;
+      summary.MONTHLY.remaining += Math.max(0, inst.expectedAmount - inst.amountPaid);
+      if (inst.dueDate >= todayStart && inst.dueDate <= todayEnd) {
+        summary.MONTHLY.customers.push({
+          id: inst.id, loanId: inst.loan.id, customerId: inst.loan.customer.customerId,
+          customerName: inst.loan.customer.name, amountDue: inst.expectedAmount,
+          amountPaid: inst.amountPaid, remaining: Math.max(0, inst.expectedAmount - inst.amountPaid),
+          status: inst.status
+        });
+      }
+    });
+    repayments.filter(r => r.loan?.frequency === 'MONTHLY' && r.paidAt >= monthStart && r.paidAt <= monthEnd).forEach(rep => {
+      summary.MONTHLY.received += rep.amount;
+    });
+
+    res.json(summary);
+  } catch (err) {
+    console.error('Today collection error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/activity', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const loans = await prisma.loan.findMany({
       take: 10,
@@ -231,6 +375,186 @@ router.get('/activity', authenticate, async (req, res) => {
     res.json(activities);
   } catch (err) {
     console.error('Activity analytics error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/profit-breakdown', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    const { frequency } = req.query;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const whereRepayment = {
+      status: 'SUCCESS',
+      paidAt: { gte: startOfMonth },
+      ...(frequency && { loan: { frequency } })
+    };
+
+    const whereExpense = {
+      date: { gte: startOfMonth },
+      ...(frequency && (frequency === 'MONTHLY' ? {} : { period: frequency })) 
+    };
+
+    const [repayments, expensesSum, investmentsRes, razorpayIncomeRes] = await Promise.all([
+      prisma.repayment.findMany({
+        where: whereRepayment,
+        select: {
+          interestComponent: true,
+          penaltyComponent: true,
+          principalComponent: true,
+          amount: true
+        }
+      }),
+      prisma.expense.aggregate({
+        where: whereExpense,
+        _sum: { amount: true }
+      }),
+      prisma.investment.aggregate({
+        where: { date: { gte: startOfMonth }, type: 'PROFIT' },
+        _sum: { amount: true }
+      }),
+      prisma.repayment.aggregate({
+        where: { ...whereRepayment, method: { in: ['ONLINE', 'UPI'] } },
+        _sum: { amount: true }
+      })
+    ]);
+
+    const stats = repayments.reduce((acc, r) => {
+      acc.interest += r.interestComponent || 0;
+      acc.penalty += r.penaltyComponent || 0;
+      acc.principal += r.principalComponent || 0;
+      acc.totalCollected += r.amount;
+      return acc;
+    }, { interest: 0, penalty: 0, principal: 0, totalCollected: 0 });
+
+    const manualExpenses = expensesSum._sum.amount || 0;
+    const razorpayFees = (razorpayIncomeRes._sum.amount || 0) * 0.01;
+    const totalExpenses = manualExpenses + razorpayFees;
+    const investmentProfit = investmentsRes._sum.amount || 0;
+    
+    // Profit = (Interest + Penalty + InvestmentProfit) - TotalExpenses
+    const netProfit = (stats.interest + stats.penalty + investmentProfit) - totalExpenses;
+
+    res.json({
+      interest: stats.interest,
+      penalty: stats.penalty,
+      principal: stats.principal,
+      investmentProfit,
+      totalCollected: stats.totalCollected,
+      expenses: totalExpenses,
+      manualExpenses,
+      razorpayFees,
+      netProfit,
+      breakdown: [
+        { label: 'Interest Income', value: stats.interest, color: 'text-accent', icon: 'trending_up' },
+        { label: 'Penalty Income', value: stats.penalty, color: 'text-amber-600', icon: 'warning' },
+        { label: 'Investment Profit', value: investmentProfit, color: 'text-blue-500', icon: 'currency_rupee' },
+        { label: 'Collection (Principal)', value: stats.principal, color: 'text-on-surface-variant', icon: 'account_balance_wallet' },
+        { label: 'Manual Expenses', value: manualExpenses, color: 'text-error', icon: 'payments' },
+        { label: 'Razorpay Charges (1%)', value: razorpayFees, color: 'text-error', icon: 'payments' },
+      ]
+    });
+  } catch (err) {
+    console.error('Profit breakdown error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/today-collection', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    
+    // For Weekly: current week (Sunday to Saturday)
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0,0,0,0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23,59,59,999);
+
+    // For Monthly: current month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const [installments, repayments] = await Promise.all([
+      prisma.installment.findMany({
+        where: { dueDate: { gte: monthStart, lte: monthEnd } },
+        include: {
+          loan: {
+            include: { customer: { select: { name: true, customerId: true } } }
+          }
+        },
+        orderBy: { dueDate: 'asc' }
+      }),
+      prisma.repayment.findMany({
+        where: { paidAt: { gte: monthStart, lte: monthEnd }, status: 'SUCCESS' },
+        include: { loan: { select: { frequency: true } } }
+      })
+    ]);
+
+    const summary = {
+      DAILY: { expected: 0, received: 0, remaining: 0, customers: [] },
+      WEEKLY: { expected: 0, received: 0, remaining: 0, customers: [] },
+      MONTHLY: { expected: 0, received: 0, remaining: 0, customers: [] }
+    };
+
+    // 1. DAILY TAB: Installments due TODAY for DAILY customers
+    installments.filter(i => i.loan.frequency === 'DAILY' && i.dueDate >= todayStart && i.dueDate <= todayEnd).forEach(inst => {
+      summary.DAILY.expected += inst.expectedAmount;
+      summary.DAILY.remaining += Math.max(0, inst.expectedAmount - inst.amountPaid);
+      summary.DAILY.customers.push({
+        id: inst.id, loanId: inst.loan.id, customerId: inst.loan.customer.customerId,
+        customerName: inst.loan.customer.name, amountDue: inst.expectedAmount,
+        amountPaid: inst.amountPaid, remaining: Math.max(0, inst.expectedAmount - inst.amountPaid),
+        status: inst.status
+      });
+    });
+    repayments.filter(r => r.loan?.frequency === 'DAILY' && r.paidAt >= todayStart && r.paidAt <= todayEnd).forEach(rep => {
+      summary.DAILY.received += rep.amount;
+    });
+
+    // 2. WEEKLY TAB: Installments due THIS WEEK for WEEKLY customers
+    installments.filter(i => i.loan.frequency === 'WEEKLY' && i.dueDate >= weekStart && i.dueDate <= weekEnd).forEach(inst => {
+      summary.WEEKLY.expected += inst.expectedAmount;
+      summary.WEEKLY.remaining += Math.max(0, inst.expectedAmount - inst.amountPaid);
+      // Only show today's ones in the list to keep it manageable
+      if (inst.dueDate >= todayStart && inst.dueDate <= todayEnd) {
+        summary.WEEKLY.customers.push({
+          id: inst.id, loanId: inst.loan.id, customerId: inst.loan.customer.customerId,
+          customerName: inst.loan.customer.name, amountDue: inst.expectedAmount,
+          amountPaid: inst.amountPaid, remaining: Math.max(0, inst.expectedAmount - inst.amountPaid),
+          status: inst.status
+        });
+      }
+    });
+    repayments.filter(r => r.loan?.frequency === 'WEEKLY' && r.paidAt >= weekStart && r.paidAt <= weekEnd).forEach(rep => {
+      summary.WEEKLY.received += rep.amount;
+    });
+
+    // 3. MONTHLY TAB: Installments due THIS MONTH for MONTHLY customers
+    installments.filter(i => i.loan.frequency === 'MONTHLY' && i.dueDate >= monthStart && i.dueDate <= monthEnd).forEach(inst => {
+      summary.MONTHLY.expected += inst.expectedAmount;
+      summary.MONTHLY.remaining += Math.max(0, inst.expectedAmount - inst.amountPaid);
+      // Only show today's ones in the list to keep it manageable
+      if (inst.dueDate >= todayStart && inst.dueDate <= todayEnd) {
+        summary.MONTHLY.customers.push({
+          id: inst.id, loanId: inst.loan.id, customerId: inst.loan.customer.customerId,
+          customerName: inst.loan.customer.name, amountDue: inst.expectedAmount,
+          amountPaid: inst.amountPaid, remaining: Math.max(0, inst.expectedAmount - inst.amountPaid),
+          status: inst.status
+        });
+      }
+    });
+    repayments.filter(r => r.loan?.frequency === 'MONTHLY' && r.paidAt >= monthStart && r.paidAt <= monthEnd).forEach(rep => {
+      summary.MONTHLY.received += rep.amount;
+    });
+
+    res.json(summary);
+  } catch (err) {
+    console.error('Admin today collection error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

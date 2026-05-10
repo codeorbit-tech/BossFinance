@@ -1,0 +1,24 @@
+{
+  "name": "Boss Finance",
+  "short_name": "BossFinance",
+  "description": "Loan Management System",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c1f45",
+  "theme_color": "#0c1f45",
+  "icons": [
+    {
+      "src": "/BossLogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/BossLogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
