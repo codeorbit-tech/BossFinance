@@ -17,6 +17,33 @@ const analyticsRoutes = require('./routes/analytics');
 const userRoutes = require('./routes/users');
 const auditRoutes = require('./routes/audit');
 const { initPenaltyJob } = require('./jobs/penaltyJob');
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+
+const prisma = new PrismaClient();
+
+async function autoSeed() {
+  try {
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      console.log('🌱 No users found. Auto-seeding default admin...');
+      const adminPassword = await bcrypt.hash('admin123', 12);
+      await prisma.user.create({
+        data: { 
+          username: 'admin', 
+          password: adminPassword, 
+          name: 'Admin User', 
+          role: 'ADMIN', 
+          email: 'admin@bossfinance.in', 
+          phone: '+918888877777' 
+        },
+      });
+      console.log('✅ Default admin (admin/admin123) created.');
+    }
+  } catch (err) {
+    console.error('❌ Auto-seed failed:', err);
+  }
+}
 
 const PORT = process.env.PORT || 5000;
 const DEFAULT_CORS_ORIGINS = [
@@ -75,8 +102,9 @@ function createApp() {
 
 function startServer(port = PORT) {
   const app = createApp();
-  const server = app.listen(port, () => {
+  const server = app.listen(port, async () => {
     console.log(`Boss Finance API running on http://localhost:${port}`);
+    await autoSeed();
     initPenaltyJob();
   });
 
