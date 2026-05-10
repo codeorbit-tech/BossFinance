@@ -1,6 +1,7 @@
 services:
   - type: web
     name: boss-finance-backend
+    plan: free
     runtime: node
     rootDir: backend
     buildCommand: npm install && npx prisma generate
