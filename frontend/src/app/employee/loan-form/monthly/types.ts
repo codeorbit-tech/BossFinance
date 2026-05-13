@@ -115,6 +115,8 @@ export interface MonthlyLoanFormData {
 export interface MonthlyLoanPhotos {
   applicantPhoto: File | null;
   coApplicantPhoto: File | null;
+  coApplicantAadhaarFront: File | null;
+  coApplicantAadhaarBack: File | null;
   guarantorPhoto: File | null;
   aadhaarFront: File | null;
   aadhaarBack: File | null;
@@ -188,6 +190,8 @@ export const emptyMonthlyLoanData = (): MonthlyLoanFormData => ({
 export const emptyMonthlyPhotos = (): MonthlyLoanPhotos => ({
   applicantPhoto: null,
   coApplicantPhoto: null,
+  coApplicantAadhaarFront: null,
+  coApplicantAadhaarBack: null,
   guarantorPhoto: null,
   aadhaarFront: null,
   aadhaarBack: null,

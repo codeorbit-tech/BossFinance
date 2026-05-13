@@ -6,11 +6,15 @@ interface Props {
   photos: MonthlyLoanPhotos;
   setPhotos: (p: MonthlyLoanPhotos) => void;
   errors: string[];
+  loanType: string;
 }
 
 function PhotoUpload({ label, icon, file, onChange, required }: {
   label: string; icon: string; file: File | null; onChange: (f: File | null) => void; required?: boolean;
 }) {
+  const isImage = !!file && file.type.startsWith('image/');
+  const previewUrl = isImage ? URL.createObjectURL(file) : null;
+
   return (
     <div>
       <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">
@@ -23,8 +27,19 @@ function PhotoUpload({ label, icon, file, onChange, required }: {
         />
         {file ? (
           <>
-            <span className="material-symbols-outlined text-accent text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            <p className="text-xs font-bold text-accent text-center truncate max-w-full px-2">{file.name}</p>
+            {isImage && previewUrl ? (
+              <img
+                src={previewUrl}
+                alt={label}
+                className="w-full h-28 object-contain rounded-xl border border-accent/20 bg-white"
+              />
+            ) : (
+              <div className="w-full h-28 rounded-xl border border-accent/20 bg-white flex flex-col items-center justify-center gap-1">
+                <span className="material-symbols-outlined text-accent text-3xl">picture_as_pdf</span>
+                <span className="text-[10px] font-bold text-accent/80 uppercase">PDF Selected</span>
+              </div>
+            )}
+            <p className="text-xs font-bold text-accent text-center break-all max-w-full px-2">{file.name}</p>
             <p className="text-[10px] text-accent/70">Tap to change</p>
           </>
         ) : (
@@ -39,7 +54,7 @@ function PhotoUpload({ label, icon, file, onChange, required }: {
   );
 }
 
-export default function Section7Documents({ photos, setPhotos, errors }: Props) {
+export default function Section7Documents({ photos, setPhotos, errors, loanType }: Props) {
   const update = (key: keyof MonthlyLoanPhotos, file: File | null) => {
     setPhotos({ ...photos, [key]: file });
   };
@@ -63,8 +78,19 @@ export default function Section7Documents({ photos, setPhotos, errors }: Props) 
         </h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <PhotoUpload label="Applicant Photo" icon="person" file={photos.applicantPhoto} onChange={f => update('applicantPhoto', f)} required />
-          <PhotoUpload label="Co-Applicant Photo" icon="group" file={photos.coApplicantPhoto} onChange={f => update('coApplicantPhoto', f)} />
           <PhotoUpload label="Guarantor Photo" icon="support_agent" file={photos.guarantorPhoto} onChange={f => update('guarantorPhoto', f)} />
+        </div>
+      </section>
+
+      <section className="bg-surface-container-low/50 border border-outline-variant/10 rounded-2xl p-6 space-y-5">
+        <h4 className="text-sm font-black text-tertiary uppercase tracking-wider flex items-center gap-2">
+          <span className="material-symbols-outlined text-lg">group</span>
+          Co-Applicant Documents
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <PhotoUpload label="Co-Applicant Photo" icon="person" file={photos.coApplicantPhoto} onChange={f => update('coApplicantPhoto', f)} />
+          <PhotoUpload label="Co-Applicant Aadhaar Front" icon="id_card" file={photos.coApplicantAadhaarFront} onChange={f => update('coApplicantAadhaarFront', f)} />
+          <PhotoUpload label="Co-Applicant Aadhaar Back" icon="id_card" file={photos.coApplicantAadhaarBack} onChange={f => update('coApplicantAadhaarBack', f)} />
         </div>
       </section>
 
@@ -74,8 +100,8 @@ export default function Section7Documents({ photos, setPhotos, errors }: Props) 
           KYC Documents
         </h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <PhotoUpload label="Aadhaar Front" icon="id_card" file={photos.aadhaarFront} onChange={f => update('aadhaarFront', f)} required />
-          <PhotoUpload label="Aadhaar Back" icon="id_card" file={photos.aadhaarBack} onChange={f => update('aadhaarBack', f)} />
+          <PhotoUpload label="Applicant Aadhaar Front" icon="id_card" file={photos.aadhaarFront} onChange={f => update('aadhaarFront', f)} required />
+          <PhotoUpload label="Applicant Aadhaar Back" icon="id_card" file={photos.aadhaarBack} onChange={f => update('aadhaarBack', f)} required={loanType === 'PERSONAL'} />
           <PhotoUpload label="PAN Card" icon="credit_card" file={photos.panCard} onChange={f => update('panCard', f)} />
         </div>
       </section>

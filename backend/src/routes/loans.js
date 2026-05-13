@@ -4,6 +4,8 @@ const Razorpay = require('razorpay');
 const { authenticate, authorize } = require('../middleware/auth');
 const { calculateNextDueDate } = require('../utils/holiday');
 const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -65,12 +67,24 @@ router.post('/:id/upload-pdf', authenticate, upload.single('pdf'), async (req, r
       return res.status(403).json({ error: 'Access denied.' });
     }
 
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const safeLoanId = String(loan.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    const filename = `loan_${safeLoanId}_${Date.now()}.pdf`;
+    const absolutePath = path.join(uploadsDir, filename);
+    fs.writeFileSync(absolutePath, req.file.buffer);
+
+    const pdfUrl = `/uploads/${filename}`;
+
     await prisma.loan.update({
       where: { id: req.params.id },
-      data: { pdfUrl: null }
+      data: { pdfUrl }
     });
 
-    res.json({ pdfUrl: null, message: 'PDF processed successfully (not stored on server).' });
+    res.json({ pdfUrl, message: 'PDF uploaded successfully.' });
   } catch (err) {
     console.error('Upload PDF error:', err);
     res.status(500).json({ error: 'Internal server error.' });

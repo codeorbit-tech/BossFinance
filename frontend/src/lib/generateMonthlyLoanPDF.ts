@@ -163,10 +163,10 @@ async function drawCoverHeader(
   logo?: LoadedPhoto | null,
   applicantPhoto?: LoadedPhoto | null
 ): Promise<number> {
-  let y = 15;
+  let y = 12;
 
   if (logo) {
-    const logoW = 35;
+    const logoW = 28;
     const logoH = logoW * logo.ratio;
     doc.addImage(logo.data, 'PNG', ML, y, logoW, logoH);
   }
@@ -182,17 +182,17 @@ async function drawCoverHeader(
     doc.text('APPLICANT PHOTO', PW - MR - photoW / 2, y + photoH + 4, { align: 'center' });
   }
 
-  y = 20;
+  y = 16;
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0);
-  doc.text('BOSS FINANCE CONSULTANCY', ML + 45, y);
+  doc.text('BOSS FINANCE CONSULTANCY', ML + 34, y);
   y += 6;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('YOUR FINANCIAL PARTNER', ML + 45, y);
+  doc.text('YOUR FINANCIAL PARTNER', ML + 34, y);
 
-  y = 40;
+  y = 44;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text(`${data.frequency} ${data.loanType} LOAN APPLICATION FORM`, ML, y);
@@ -201,7 +201,7 @@ async function drawCoverHeader(
   doc.text(`Form No: ${val(data.applicationFormNo)}`, PW - MR - 35, y, { align: 'right' });
   doc.text(`Date: ${val(data.applicationDate)}`, PW - MR - 35, y + 5, { align: 'right' });
 
-  y = 52;
+  y = 56;
   return divider(doc, y) + 2;
 }
 
@@ -530,6 +530,46 @@ function drawDeclaration(doc: Doc, data: SimpleLoanFormData): void {
   });
 }
 
+function drawTermsAndConditions(doc: Doc, data: SimpleLoanFormData): void {
+  doc.addPage();
+  let y = 20;
+  y = sectionTitle(doc, y, 'Terms & Conditions');
+
+  const terms = [
+    `Loan amount, interest rate, tenure, and EMI are as sanctioned by Boss Finance Consultancy and accepted by the borrower at disbursement.`,
+    `EMI must be paid on or before each due date. Any delay will attract additional penalty charges as per company policy in force on the payment date.`,
+    `For overdue installments, penal charges/penal interest may be applied from due date till realization, and recovery follow-ups may be initiated.`,
+    `Payments will be adjusted in the order: (1) penalty/penal charges, (2) interest due, (3) principal outstanding unless otherwise approved in writing.`,
+    `Repeated delays, cheque/auto-debit failures, or non-payment may lead to loan recall, legal action, and reporting in internal/default records.`,
+    `Borrower and guarantor confirm all submitted documents and declarations are true. Any false information can lead to immediate rejection/recall.`,
+    `Borrower must promptly inform changes in mobile number, address, employment/business, or bank mandate details.`,
+    `Foreclosure/pre-closure, part-payment, and related charges (if any) are governed by prevailing policy communicated at the time of request.`,
+    `In case of dispute, company records, signed application, repayment ledger, and sanction terms will be treated as primary reference documents.`,
+    `By signing this application, borrower/co-applicant/guarantor agree to all terms and authorize verification, field visits, and communication reminders.`,
+  ];
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  terms.forEach((term, idx) => {
+    y = checkPage(doc, y, 12);
+    const line = `${idx + 1}. ${term}`;
+    const wrapped = doc.splitTextToSize(line, CW - 2);
+    doc.text(wrapped, ML + 1, y);
+    y += wrapped.length * 4.5 + 2;
+  });
+
+  y += 3;
+  y = checkPage(doc, y, 16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Penalty Note:', ML + 1, y);
+  doc.setFont('helvetica', 'normal');
+  const penaltyNote = doc.splitTextToSize(
+    `If EMI is not paid on the due date, the account is treated as overdue and penalty/penal interest is applied for the delayed period until payment clearance.`,
+    CW - 35
+  );
+  doc.text(penaltyNote, ML + 28, y);
+}
+
 // ─── MAIN EXPORT ───
 export async function generateMonthlyLoanPDF(
   data: SimpleLoanFormData,
@@ -550,8 +590,8 @@ export async function generateMonthlyLoanPDF(
   y = drawSection3(doc, y, data);
   y = drawSection4(doc, y, data);
   y = drawSection5(doc, y, data);
-  await drawSection6Photos(doc, photos);
   drawAnnexures(doc, data);
+  drawTermsAndConditions(doc, data);
   drawDeclaration(doc, data);
   addFooters(doc);
 

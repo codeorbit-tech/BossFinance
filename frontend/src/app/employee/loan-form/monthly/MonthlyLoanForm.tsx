@@ -62,6 +62,13 @@ function validateSection(section: number, data: MonthlyLoanFormData, photos: Mon
   if (section === 7) {
     if (!photos.applicantPhoto) errs.push('Applicant Photo is required.');
     if (!photos.aadhaarFront) errs.push('Aadhaar Front is required.');
+    if (data.loanType === 'PERSONAL' && !photos.aadhaarBack) errs.push('Aadhaar Back is required for Personal Loan.');
+    if (data.coApplicantName?.trim() && !photos.coApplicantAadhaarFront) {
+      errs.push('Co-Applicant Aadhaar Front is required when Co-Applicant name is provided.');
+    }
+    if (data.coApplicantName?.trim() && !photos.coApplicantAadhaarBack) {
+      errs.push('Co-Applicant Aadhaar Back is required when Co-Applicant name is provided.');
+    }
   }
   return errs;
 }
@@ -151,6 +158,8 @@ export default function MonthlyLoanForm() {
     setPhotos({
       applicantPhoto: createDummyFile("applicant.jpg"),
       coApplicantPhoto: createDummyFile("co_applicant.jpg"),
+      coApplicantAadhaarFront: createDummyFile("co_aadhaar_front.jpg"),
+      coApplicantAadhaarBack: createDummyFile("co_aadhaar_back.jpg"),
       guarantorPhoto: createDummyFile("guarantor.jpg"),
       aadhaarFront: createDummyFile("aadhaar_front.jpg"),
       aadhaarBack: createDummyFile("aadhaar_back.jpg"),
@@ -505,7 +514,7 @@ export default function MonthlyLoanForm() {
               {currentSection === 4 && <Section4AddressContact {...sectionProps} />}
               {currentSection === 5 && <Section5BankDetails {...sectionProps} />}
               {currentSection === 6 && <Section6EmploymentBusiness {...sectionProps} />}
-              {currentSection === 7 && <Section7Documents photos={photos} setPhotos={setPhotos} errors={errors} />}
+        {currentSection === 7 && <Section7Documents photos={photos} setPhotos={setPhotos} errors={errors} loanType={formData.loanType} />}
             </div>
 
             {/* Navigation Footer */}

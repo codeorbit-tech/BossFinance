@@ -333,12 +333,29 @@ export default function LoanApplicationsPage() {
     }
   };
 
+  const triggerPdfDownload = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const openPdf = (url: string | null) => {
     if (!url) { toast.error('No PDF recorded for this application'); return; }
     const fullUrl = url.startsWith('/')
       ? `${window.location.origin}${url}`
       : url;
+    triggerPdfDownload(fullUrl);
     setSelectedPdf(fullUrl);
+  };
+
+  const getFullPdfUrl = (url: string | null) => {
+    if (!url) return null;
+    return url.startsWith('/') ? `${window.location.origin}${url}` : url;
   };
 
   // After subscription created, optimistically update the row
@@ -429,6 +446,18 @@ export default function LoanApplicationsPage() {
                           </svg>
                           <span>PDF</span>
                         </button>
+                        {app.pdfUrl && (
+                          <a
+                            href={getFullPdfUrl(app.pdfUrl) || '#'}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 font-bold text-xs text-slate-600 hover:text-slate-800 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm">download</span>
+                            <span>Download</span>
+                          </a>
+                        )}
 
                         {/* Approve / Query */}
                         {(app.status === 'PENDING' || app.status === 'QUERIED') && (
