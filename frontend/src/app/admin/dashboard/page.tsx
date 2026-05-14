@@ -178,7 +178,7 @@ export default function AdminDashboard() {
         </div>
         
         {/* Modern Tab Navigation */}
-        <div className="flex bg-surface-container-high p-1 rounded-xl w-fit border border-outline-variant/10">
+        <div className="flex bg-surface-container-high p-1 rounded-xl w-full sm:w-fit overflow-x-auto no-scrollbar border border-outline-variant/10">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
                 <div className="h-6 w-1.5 bg-secondary rounded-full"></div>
                 <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Portfolio Metrics</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <StatCard label="Target Collections" value={stats.expected} subtitle={`Due in ${activeTab} period`} variant="default" />
                 <StatCard label="Actual Collections" value={stats.actual} subtitle={`Collected in ${activeTab} period`} variant="accent" />
                 <StatCard label="Amount Sanctioned" value={stats.sanctioned} variant="default" />
@@ -324,7 +324,55 @@ export default function AdminDashboard() {
                     <p className="text-xs text-on-surface-variant mt-1">No overdue installments or NPA flags found.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <>
+                    {/* Mobile Card View */}
+                    <div className="block lg:hidden divide-y divide-outline-variant/10">
+                      {npaDetails.map((npa) => {
+                        const status = getNpaStatus(npa);
+                        return (
+                          <div 
+                            key={npa.id} 
+                            onClick={() => setSelectedNpa(npa)}
+                            className="p-4 space-y-4 active:bg-surface-container-low/50 transition-colors"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-sm font-black text-tertiary">{npa.customerName}</p>
+                                <p className="text-[10px] font-mono text-on-surface-variant">{npa.customerId}</p>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${status.color}`}>
+                                {status.label}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">EMI Amount</p>
+                                <p className="text-xs font-black text-tertiary">₹{npa.emiAmount.toLocaleString()}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Penalty</p>
+                                <p className="text-xs font-black text-error">₹{npa.penaltyAmount.toLocaleString()}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-surface-container-low p-2 rounded-lg">
+                              <div className="flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-xs text-on-surface-variant">calendar_today</span>
+                                <span className="text-[10px] font-bold text-on-surface-variant">
+                                  {npa.dueDate ? new Date(npa.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}
+                                </span>
+                              </div>
+                              <span className={`text-[10px] font-black ${getDaysOverdue(npa.dueDate) > 0 ? 'text-error' : 'text-on-surface-variant'}`}>
+                                {getDaysOverdue(npa.dueDate)}d Overdue
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full text-left">
                       <thead className="bg-surface-container-low/50 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/5">
                         <tr>
@@ -379,6 +427,7 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
+                  </>
                 )}
               </div>
             </section>

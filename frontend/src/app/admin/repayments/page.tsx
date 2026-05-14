@@ -793,7 +793,103 @@ export default function RepaymentTracker() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            {/* Mobile Leaderboard Cards */}
+            <div className="block sm:hidden divide-y divide-outline-variant/5">
+              {repayments.map((r) => {
+                const isAnimating = animatingIds.has(r.id);
+                const paidPct = r.loanAmount > 0 ? Math.min(100, (r.totalPaid / r.loanAmount) * 100) : 0;
+                const isOverdue = r.status === 'OVERDUE';
+                const isCleared = r.status === 'CLEARED';
+                const isDueToday = r.status === 'DUE_TODAY';
+                const isPenaltyPending = r.status === 'PENALTY_PENDING';
+
+                return (
+                  <div
+                    key={r.id}
+                    className={`p-4 space-y-4 transition-all duration-700 ${
+                      isAnimating ? 'bg-accent/10 scale-[1.01] shadow-md z-10 relative' : ''
+                    } ${isOverdue && !isAnimating ? 'bg-error/5' : ''} ${
+                      isDueToday && !isAnimating ? 'bg-accent/5 border-l-4 border-l-accent' : ''
+                    } ${isCleared ? 'opacity-60' : ''}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-3">
+                        <RankBadge rank={r.rank ?? 0} />
+                        <div>
+                          <p className="font-black text-tertiary leading-tight">{r.customerName}</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-wider">{r.customerId}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge status={r.status} />
+                        {isAnimating && (
+                          <span className="text-[9px] text-accent font-bold animate-pulse">↑ Updated</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/10">
+                        <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-1">Outstanding</p>
+                        <p className={`text-sm font-black ${isOverdue ? 'text-error' : 'text-tertiary'}`}>
+                          ₹{r.outstanding.toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                      <div className="bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/10">
+                        <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-1">EMI Amount</p>
+                        <p className="text-sm font-black text-on-surface">₹{r.emi.toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-bold">
+                        <span className="text-on-surface-variant">Repayment Progress</span>
+                        <span className="text-tertiary">{paidPct.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-surface-container rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ${
+                            isCleared ? 'bg-accent' : isOverdue ? 'bg-error' : 'bg-tertiary'
+                          }`}
+                          style={{ width: `${paidPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-1">
+                      <div className="text-[10px]">
+                        <p className="text-on-surface-variant/70 uppercase font-bold tracking-tighter">Next Due</p>
+                        <p className={`font-bold ${getDueDateColor(r)}`}>
+                          {isCleared ? 'Fully Repaid' : getDueDateLabel(r)}
+                        </p>
+                      </div>
+                      <div>
+                        {isPenaltyPending ? (
+                          <button
+                            onClick={() => setClosureModal({ loan: r, totalPenaltyDue: r.penaltyDue || 0 })}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-100 text-amber-700 text-xs font-bold shadow-sm"
+                          >
+                            <span className="material-symbols-outlined text-sm">price_check</span>
+                            Settle
+                          </button>
+                        ) : !isCleared && (
+                          <button
+                            onClick={() => setPaymentModal(r)}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-white text-xs font-bold shadow-md shadow-accent/20 active:scale-95 transition-transform"
+                          >
+                            <span className="material-symbols-outlined text-sm">add_card</span>
+                            Record Payment
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Leaderboard Table */}
+            <table className="hidden sm:table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container/50">
                   <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-tertiary/70 w-12">Rank</th>

@@ -157,7 +157,7 @@ export default function LoanFormPage() {
               <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Select Frequency</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {FREQUENCIES.map((freq) => {
                 const isSelected = selectedFrequency === freq.value;
                 return (
@@ -357,68 +357,87 @@ export default function LoanFormPage() {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-12 py-4 bg-gradient-to-r from-accent to-on-primary-container text-white font-bold rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-xl shadow-accent/20 disabled:opacity-50 active:scale-95"
-              >
-                <span className="material-symbols-outlined">{loading ? 'progress_activity' : 'verified'}</span>
-                {loading ? 'Processing...' : isNewCustomer ? 'Register & Apply for Loan' : 'Submit Loan Application'}
-              </button>
-            </form>
-          )}
-        </div>
+                {/* Mobile Inline Summary */}
+                <div className="block xl:hidden mt-6">
+                  <LoanSummaryCard summary={summary} form={form} />
+                </div>
 
-        {/* Fixed Loan Summary Card */}
-        {showBasicForm && (
-          <div className="hidden xl:block">
-            <div className="fixed right-12 top-1/2 -translate-y-1/2 w-80 bg-tertiary rounded-2xl overflow-hidden shadow-2xl z-10">
-              <div className="bg-white/10 px-6 py-4 border-b border-white/10">
-                <h3 className="text-white font-bold text-sm uppercase tracking-widest">Loan Summary</h3>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="space-y-1">
-                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Principal Amount</p>
-                  <p className="text-white text-2xl font-black">{formatCurrency(parseFloat(form.amount) || 0)}</p>
-                </div>
-                <div className="space-y-4">
-                  {(form.frequency === 'DAILY' || form.frequency === 'WEEKLY') && (
-                    <div className="flex justify-between items-end border-b border-white/5 pb-3">
-                      <span className="text-emerald-400/80 text-xs font-bold">Disbursed Amount</span>
-                      <span className="text-emerald-400 font-bold">{formatCurrency(summary.disbursedAmount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-end border-b border-white/5 pb-3">
-                    <span className="text-white/60 text-xs">{form.frequency === 'DAILY' || form.frequency === 'WEEKLY' ? 'Upfront Interest' : 'Total Interest'}</span>
-                    <span className="text-accent font-bold">{formatCurrency(summary.totalInterest)}</span>
-                  </div>
-                  <div className="flex justify-between items-end border-b border-white/5 pb-3">
-                    <span className="text-white/60 text-xs">Repayment Total</span>
-                    <span className="text-white font-bold text-lg">{formatCurrency(summary.totalRepayment)}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10">
-                    <div className="flex flex-col">
-                      <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Calculated EMI</span>
-                      <span className="text-accent text-xl font-black leading-none mt-1">{formatCurrency(summary.emiAmount)}</span>
-                    </div>
-                    <span className="text-white/40 text-[10px] font-bold rotate-90 tracking-widest uppercase">
-                      Per {form.frequency === 'DAILY' ? 'Day' : form.frequency === 'WEEKLY' ? 'Week' : 'Month'}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-accent/10 rounded-xl p-4 flex gap-3 items-start border border-accent/20">
-                  <span className="material-symbols-outlined text-accent text-lg mt-0.5">info</span>
-                  <p className="text-accent/90 text-[10px] font-medium leading-relaxed">
-                    {form.frequency === 'DAILY' || form.frequency === 'WEEKLY' 
-                      ? 'Upfront interest is deducted from the principal. EMI includes principal only.' 
-                      : 'Flat interest calculation.'}
-                  </p>
-                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full px-8 sm:px-12 py-4 bg-gradient-to-r from-accent to-on-primary-container text-white font-bold rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-xl shadow-accent/20 disabled:opacity-50 active:scale-95"
+                >
+                  <span className="material-symbols-outlined">{loading ? 'progress_activity' : 'verified'}</span>
+                  {loading ? 'Processing...' : isNewCustomer ? 'Register & Apply for Loan' : 'Submit Loan Application'}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Fixed Desktop Loan Summary Card */}
+          {showBasicForm && (
+            <div className="hidden xl:block">
+              <div className="fixed right-8 top-[100px] w-80 z-10">
+                <LoanSummaryCard summary={summary} form={form} />
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+
+  // --- Reusable Component for Loan Summary ---
+  function LoanSummaryCard({ summary, form }: { summary: any, form: any }) {
+    const formatCurrency = (val: number) =>
+      new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+
+    return (
+      <div className="bg-tertiary rounded-2xl overflow-hidden shadow-2xl w-full xl:w-80">
+        <div className="bg-white/10 px-5 sm:px-6 py-4 border-b border-white/10">
+          <h3 className="text-white font-bold text-sm uppercase tracking-widest">Loan Summary</h3>
+        </div>
+        <div className="p-5 sm:p-6 space-y-6">
+          <div className="space-y-1">
+            <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Principal Amount</p>
+            <p className="text-white text-2xl font-black">{formatCurrency(parseFloat(form.amount) || 0)}</p>
+          </div>
+          <div className="space-y-4">
+            {(form.frequency === 'DAILY' || form.frequency === 'WEEKLY') && (
+              <div className="flex justify-between items-end border-b border-white/5 pb-3">
+                <span className="text-emerald-400/80 text-xs font-bold">Disbursed Amount</span>
+                <span className="text-emerald-400 font-bold">{formatCurrency(summary.disbursedAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-end border-b border-white/5 pb-3">
+              <span className="text-white/60 text-xs">{form.frequency === 'DAILY' || form.frequency === 'WEEKLY' ? 'Upfront Interest' : 'Total Interest'}</span>
+              <span className="text-accent font-bold">{formatCurrency(summary.totalInterest)}</span>
+            </div>
+            <div className="flex justify-between items-end border-b border-white/5 pb-3">
+              <span className="text-white/60 text-xs">Repayment Total</span>
+              <span className="text-white font-bold text-lg">{formatCurrency(summary.totalRepayment)}</span>
+            </div>
+            <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10">
+              <div className="flex flex-col">
+                <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Calculated EMI</span>
+                <span className="text-accent text-xl font-black leading-none mt-1">{formatCurrency(summary.emiAmount)}</span>
+              </div>
+              <span className="text-white/40 text-[10px] font-bold rotate-90 tracking-widest uppercase">
+                Per {form.frequency === 'DAILY' ? 'Day' : form.frequency === 'WEEKLY' ? 'Week' : 'Month'}
+              </span>
+            </div>
+          </div>
+          <div className="bg-accent/10 rounded-xl p-4 flex gap-3 items-start border border-accent/20">
+            <span className="material-symbols-outlined text-accent text-lg mt-0.5">info</span>
+            <p className="text-accent/90 text-[10px] font-medium leading-relaxed">
+              {form.frequency === 'DAILY' || form.frequency === 'WEEKLY' 
+                ? 'Upfront interest is deducted from the principal. EMI includes principal only.' 
+                : 'Flat interest calculation.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+// End of file

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { notifyAuthChanged, useStoredUser } from '@/lib/authState';
 
 const adminNav = [
@@ -27,9 +27,15 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const user = useStoredUser();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const navItems = user?.role === 'ADMIN' ? adminNav : employeeNav;
+  
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setCollapsed(true);
+    }
+  }, [pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

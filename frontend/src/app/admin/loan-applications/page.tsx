@@ -264,11 +264,11 @@ function SectionCard({ title, icon, children }: { title: string; icon: string; c
   if (!hasContent) return null;
   return (
     <div className="bg-surface-container-low rounded-2xl border border-outline-variant/10 overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-outline-variant/10 bg-surface-container">
+      <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-outline-variant/10 bg-surface-container">
         <span className="material-symbols-outlined text-accent text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-        <h4 className="text-xs font-black text-tertiary uppercase tracking-wider">{title}</h4>
+        <h4 className="text-[11px] sm:text-xs font-black text-tertiary uppercase tracking-wider">{title}</h4>
       </div>
-      <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-5 gap-x-4">
         {children}
       </div>
     </div>
@@ -328,22 +328,22 @@ function LoanDetailModal({
   const applicantPAN     = f.panNo || f.pan || loan.customer?.pan || '—';
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center p-4 pt-10 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden mb-10">
+    <div className="fixed inset-0 z-[80] flex items-center sm:items-start justify-center p-2 sm:p-4 sm:pt-10 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-3xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden my-auto sm:mb-10">
         {/* Header */}
         <div className="p-5 bg-gradient-to-br from-tertiary via-secondary to-primary text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white -translate-y-1/2 translate-x-1/2" />
           </div>
           <div className="relative flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1">Loan Application Review</p>
-              <h3 className="text-lg font-black">{applicantName}</h3>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold capitalize">{loan.loanType?.toLowerCase()}</span>
-                <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold">₹{loan.amount?.toLocaleString('en-IN')}</span>
-                {loan.frequency && <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold capitalize">{loan.frequency?.toLowerCase()}</span>}
-                <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold">{loan.tenure} {isSimple ? 'days/wks' : 'months'}</span>
+            <div className="flex-1">
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1">Loan Application Review</p>
+              <h3 className="text-base sm:text-lg font-black leading-tight">{applicantName}</h3>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2.5">
+                <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/15 text-[10px] sm:text-xs font-bold capitalize">{loan.loanType?.toLowerCase()}</span>
+                <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/15 text-[10px] sm:text-xs font-bold">₹{loan.amount?.toLocaleString('en-IN')}</span>
+                {loan.frequency && <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/15 text-[10px] sm:text-xs font-bold capitalize">{loan.frequency?.toLowerCase()}</span>}
+                <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/15 text-[10px] sm:text-xs font-bold">{loan.tenure} {isSimple ? 'days/wks' : 'months'}</span>
               </div>
             </div>
             <button
@@ -355,7 +355,7 @@ function LoanDetailModal({
           </div>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-6 overflow-y-auto max-h-[65vh] sm:max-h-[70vh]">
           {!raw ? (
             <div className="text-center py-10 text-on-surface-variant">
               <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">description</span>
@@ -525,8 +525,8 @@ function LoanDetailModal({
                     </>
                   )}
                   {f.immovableProperties?.map((p: any, i: number) => (
-                    <div key={i} className="col-span-2 md:col-span-3 border-t border-outline-variant/20 pt-2 mt-2 first:border-0 first:pt-0 first:mt-0">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6">
+                    <div key={i} className="col-span-1 sm:col-span-2 lg:col-span-3 border-t border-outline-variant/20 pt-4 mt-2 first:border-0 first:pt-0 first:mt-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
                         <FieldRow label={`Immovable Prop ${i+1}`} value={p.assetType === 'Others' ? p.assetTypeOther : p.assetType} />
                         <FieldRow label="Land Area" value={p.landArea} />
                         <FieldRow label="Built-Up Area" value={p.builtUpArea} />
@@ -561,26 +561,28 @@ function LoanDetailModal({
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-outline-variant/20 flex justify-end gap-3 bg-surface-container-low">
+        <div className="px-4 sm:px-5 py-4 border-t border-outline-variant/20 flex flex-col sm:flex-row justify-end gap-3 bg-surface-container-low">
           {(loan.status === 'PENDING' || loan.status === 'QUERIED') && (
             <>
               <button
                 onClick={() => { onQuery(loan); onClose(); }}
-                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm"
+                className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm flex items-center justify-center gap-2"
               >
+                <span className="material-symbols-outlined text-lg">help_outline</span>
                 Send Query
               </button>
               <button
                 onClick={() => { onApprove(loan.id); onClose(); }}
-                className="px-6 py-2 bg-accent text-white font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm"
+                className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-accent text-white font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm flex items-center justify-center gap-2"
               >
+                <span className="material-symbols-outlined text-lg">check_circle</span>
                 Approve Loan
               </button>
             </>
           )}
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-outline-variant/30 text-on-surface font-bold rounded-xl hover:bg-surface-container-highest transition-all text-sm"
+            className="w-full sm:w-auto px-6 py-3 sm:py-2 border border-outline-variant/30 text-on-surface font-bold rounded-xl hover:bg-surface-container-highest transition-all text-sm"
           >
             Close
           </button>
@@ -719,7 +721,66 @@ export default function LoanApplicationsPage() {
           ) : loans.length === 0 ? (
             <div className="p-12 text-center text-on-surface-variant font-bold">No applications found.</div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <>
+              <div className="block lg:hidden divide-y divide-surface-container">
+              {loans.map((app) => (
+                <div key={app.id} className="p-4 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-black text-tertiary">{app.customer?.name || 'Unknown'}</p>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{app.customer?.customerId || 'N/A'}</p>
+                    </div>
+                    <StatusBadge status={app.status} />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                    <div>
+                      <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Loan Type</p>
+                      <p className="text-xs font-bold text-on-surface capitalize">{app.loanType.toLowerCase()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Amount</p>
+                      <p className="text-sm font-black text-tertiary">₹{app.amount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Date</p>
+                      <p className="text-[11px] font-medium text-on-surface-variant">{new Date(app.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Employee</p>
+                      <p className="text-[11px] font-medium text-on-surface-variant truncate">{app.createdBy?.name || 'Auto'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => setDetailLoan(app)}
+                      className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-accent/10 text-accent font-bold text-xs"
+                    >
+                      <span className="material-symbols-outlined text-lg">description</span>
+                      Details
+                    </button>
+                    {(app.status === 'PENDING' || app.status === 'QUERIED') && (
+                      <>
+                        <button onClick={() => handleApprove(app.id)} className="flex-1 h-10 rounded-lg bg-accent text-white font-bold text-[10px]">Approve</button>
+                        <button onClick={() => handleOpenQueryModal(app)} className="flex-1 h-10 rounded-lg bg-blue-600 text-white font-bold text-[10px]">Query</button>
+                      </>
+                    )}
+                    {app.status === 'APPROVED' && (
+                      <button onClick={() => { setDisbursementMethod('BANK_TRANSFER'); setDisburseModalLoan(app); }} className="w-full h-10 rounded-lg bg-primary text-white font-bold text-[10px]">Disburse Funds</button>
+                    )}
+                    {app.status === 'ACTIVE' && (
+                      <button onClick={() => setAutopayLoan(app)} className="w-full h-10 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-[10px] flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-sm">autorenew</span>
+                        Setup Autopay
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <table className="hidden lg:table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-low/50">
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-tertiary/70 border-b border-surface-container">Customer</th>
@@ -837,6 +898,7 @@ export default function LoanApplicationsPage() {
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </div>
         {!isLoading && totalPages > 1 && (

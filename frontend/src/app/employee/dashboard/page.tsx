@@ -92,7 +92,7 @@ export default function EmployeeDashboard() {
           {[1, 2, 3].map(i => <div key={i} className="h-32 bg-surface-container-low rounded-xl" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <StatCard label="Target Collections" value={`₹${(collection?.MONTHLY.expected || 0).toLocaleString()}`} subtitle="Monthly target" variant="default" />
           <StatCard label="Actual Collections" value={`₹${(collection?.MONTHLY.received || 0).toLocaleString()}`} subtitle="Monthly collected" variant="accent" />
           <StatCard label="Customers Created" value={stats.customersCreated.toString()} subtitle="This month" variant="default" />
@@ -137,9 +137,9 @@ export default function EmployeeDashboard() {
             <div className="h-2 w-48 bg-surface-container-low mx-auto rounded" />
           </div>
         ) : (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Collection Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
               <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/5">
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Amount Expected</p>
                 <p className="text-xl font-black text-tertiary">₹{currentMetrics?.expected.toLocaleString()}</p>
@@ -158,10 +158,10 @@ export default function EmployeeDashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Quick Actions */}
         <div className="space-y-4">
-          <a href="/employee/loan-form" className="flex items-center gap-6 bg-surface-container-lowest p-6 rounded-xl hover:shadow-md transition-all group border border-outline-variant/10">
+          <a href="/employee/loan-form" className="flex items-center gap-4 sm:gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-xl hover:shadow-md transition-all group border border-outline-variant/10">
             <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
               <span className="material-symbols-outlined text-accent text-2xl">description</span>
             </div>
@@ -172,8 +172,8 @@ export default function EmployeeDashboard() {
             <span className="material-symbols-outlined ml-auto text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
           </a>
 
-          <a href="/employee/repayments" className="flex items-center gap-6 bg-surface-container-lowest p-6 rounded-xl hover:shadow-md transition-all group border border-outline-variant/10">
-            <div className="w-12 h-12 rounded-lg bg-secondary-container/30 flex items-center justify-center group-hover:bg-secondary-container/50 transition-colors">
+          <a href="/employee/repayments" className="flex items-center gap-4 sm:gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-xl hover:shadow-md transition-all group border border-outline-variant/10">
+            <div className="w-12 h-12 rounded-lg bg-secondary-container/30 flex items-center justify-center shrink-0 group-hover:bg-secondary-container/50 transition-colors">
               <span className="material-symbols-outlined text-on-secondary-container text-2xl">payments</span>
             </div>
             <div>

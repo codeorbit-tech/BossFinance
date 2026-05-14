@@ -23,7 +23,7 @@ export default function TopNav() {
   const showSearch = pathname.startsWith('/admin/customers');
 
   return (
-    <header className="h-16 flex justify-between items-center sticky top-0 z-40 bg-surface px-8 w-full font-[var(--font-body)] text-sm border-b border-outline-variant/10">
+    <header className="h-16 flex justify-between items-center sticky top-0 z-40 bg-surface px-4 sm:px-8 w-full font-[var(--font-body)] text-sm border-b border-outline-variant/10">
       {/* Search */}
       <div className="flex items-center gap-4 w-1/3">
         {showSearch && (

@@ -74,7 +74,59 @@ export default function AuditLogsPage() {
 
       <div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10 shadow-lg">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          {/* Mobile Card View */}
+          <div className="block lg:hidden divide-y divide-outline-variant/10">
+            {loading ? (
+              <div className="py-20 text-center animate-pulse font-bold text-on-surface-variant">Fetching audit data...</div>
+            ) : logs.length === 0 ? (
+              <div className="py-20 text-center font-bold text-on-surface-variant">No logs found matching your criteria.</div>
+            ) : (
+              logs.map((log) => (
+                <div key={log.id} className="p-4 space-y-3 hover:bg-surface-container-low/30 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-tertiary">{log.changedBy?.name || 'System'}</span>
+                      <span className="text-[10px] uppercase tracking-tighter text-on-surface-variant font-bold">{log.changedBy?.role || 'Service'}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-tertiary text-[10px] font-bold">{new Date(log.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[9px] text-on-surface-variant">{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="bg-surface-container-high px-2 py-1 rounded border border-outline-variant/10 uppercase font-black text-[10px] text-tertiary">
+                      {log.field}
+                    </span>
+                    {log.customer ? (
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-bold text-tertiary">{log.customer.name}</span>
+                        <span className="text-[9px] font-mono text-accent leading-none">{log.customer.customerId}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-on-surface-variant/40 italic">Global/System</span>
+                    )}
+                  </div>
+
+                  <div className="bg-surface-container-low/50 p-3 rounded-xl border border-outline-variant/5">
+                    {log.oldValue && log.oldValue !== 'None' && log.oldValue !== 'undefined' && (
+                      <div className="flex items-center gap-1.5 opacity-40 mb-1">
+                        <span className="material-symbols-outlined text-xs">remove_circle</span>
+                        <span className="line-through truncate text-[10px]">{log.oldValue}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 text-accent">
+                      <span className="material-symbols-outlined text-sm">add_circle</span>
+                      <span className="font-bold text-[11px] break-all">{log.newValue}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <table className="hidden lg:table w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low/50">
                 <th className="px-6 py-4 text-[10px] uppercase font-bold text-tertiary/60 tracking-widest">Timestamp</th>

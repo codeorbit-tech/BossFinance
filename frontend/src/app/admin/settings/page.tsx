@@ -267,42 +267,78 @@ export default function SettingsPage() {
             {isLoadingUsers ? (
               <div className="p-8 text-center text-on-surface-variant">Loading team...</div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead className="bg-surface-container-low text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4">Name & Username</th>
-                    <th className="px-6 py-4">Role</th>
-                    <th className="px-6 py-4">Contact</th>
-                    <th className="px-6 py-4">Joined</th>
-                    <th className="px-6 py-4 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-container-high">
+              <>
+                {/* Mobile Team Cards */}
+                <div className="block lg:hidden divide-y divide-surface-container-high">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-surface-container-low/30 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-tertiary">{u.name}</p>
-                        <p className="text-[10px] text-on-surface-variant font-mono">@{u.username}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <div key={u.id} className="p-4 space-y-3 hover:bg-surface-container-low/30 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-tertiary">{u.name}</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest leading-none">@{u.username}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                           {u.role}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-xs text-tertiary">{u.phone || 'No phone'}</p>
-                        <p className="text-[10px] text-on-surface-variant">{u.email || 'No email'}</p>
-                      </td>
-                      <td className="px-6 py-4 text-on-surface-variant text-xs">{new Date(u.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-center">
-                        <button onClick={() => handleDeleteUser(u.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 bg-surface-container-low/50 p-3 rounded-xl">
+                        <div>
+                          <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Phone</p>
+                          <p className="text-xs text-tertiary font-bold">{u.phone || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Email</p>
+                          <p className="text-xs text-tertiary font-bold truncate">{u.email || '—'}</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <p className="text-[10px] text-on-surface-variant font-medium italic">Joined: {new Date(u.createdAt).toLocaleDateString()}</p>
+                        <button onClick={() => handleDeleteUser(u.id)} className="p-2 rounded-lg bg-error/5 text-error active:scale-90 transition-all">
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop Team Table */}
+                <table className="hidden lg:table w-full text-left text-sm">
+                  <thead className="bg-surface-container-low text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4">Name & Username</th>
+                      <th className="px-6 py-4">Role</th>
+                      <th className="px-6 py-4">Contact</th>
+                      <th className="px-6 py-4">Joined</th>
+                      <th className="px-6 py-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-container-high">
+                    {users.map((u) => (
+                      <tr key={u.id} className="hover:bg-surface-container-low/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-tertiary">{u.name}</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono">@{u.username}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-xs text-tertiary">{u.phone || 'No phone'}</p>
+                          <p className="text-[10px] text-on-surface-variant">{u.email || 'No email'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-on-surface-variant text-xs">{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-center">
+                          <button onClick={() => handleDeleteUser(u.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )}
           </div>
         </section>
@@ -337,38 +373,64 @@ export default function SettingsPage() {
             {isLoadingHolidays ? (
               <div className="p-8 text-center text-on-surface-variant">Loading holidays...</div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead className="bg-surface-container-low text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4">Date</th>
-                    <th className="px-6 py-4">Holiday Name</th>
-                    <th className="px-6 py-4">Type</th>
-                    <th className="px-6 py-4">State Coverage</th>
-                    <th className="px-6 py-4 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-container-high">
+              <>
+                {/* Mobile Holiday Cards */}
+                <div className="block lg:hidden divide-y divide-surface-container-high">
                   {holidays.map((h, i) => (
-                    <tr key={i} className="hover:bg-surface-container-low/30 transition-colors">
-                      <td className="px-6 py-4 font-bold text-tertiary">{new Date(h.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-on-surface-variant font-medium">{h.name}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${h.type === 'National' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                    <div key={i} className="p-4 space-y-3 hover:bg-surface-container-low/30 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm font-black text-tertiary">{h.name}</p>
+                          <p className="text-[10px] font-mono text-accent font-bold mt-0.5">{new Date(h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${h.type === 'National' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                           {h.type}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-on-surface-variant">{h.state}</td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => handleDeleteHoliday(h.id)} className="text-slate-400 hover:text-red-500 transition-colors">
-                            <span className="material-symbols-outlined text-lg">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <p className="text-[10px] text-on-surface-variant font-medium">State: <span className="font-bold">{h.state}</span></p>
+                        <button onClick={() => handleDeleteHoliday(h.id)} className="p-2 rounded-lg bg-error/5 text-error active:scale-90 transition-all">
+                          <span className="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop Holiday Table */}
+                <table className="hidden lg:table w-full text-left text-sm">
+                  <thead className="bg-surface-container-low text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4">Date</th>
+                      <th className="px-6 py-4">Holiday Name</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4">State Coverage</th>
+                      <th className="px-6 py-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-container-high">
+                    {holidays.map((h, i) => (
+                      <tr key={i} className="hover:bg-surface-container-low/30 transition-colors">
+                        <td className="px-6 py-4 font-bold text-tertiary">{new Date(h.date).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-on-surface-variant font-medium">{h.name}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${h.type === 'National' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {h.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-on-surface-variant">{h.state}</td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex justify-center gap-2">
+                            <button onClick={() => handleDeleteHoliday(h.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )}
           </div>
           <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3">

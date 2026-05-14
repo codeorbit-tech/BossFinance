@@ -109,7 +109,45 @@ function CustomersList() {
           ) : customers.length === 0 ? (
             <div className="p-12 text-center text-on-surface-variant font-bold">No customers found.</div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <div className="block sm:hidden divide-y divide-surface-container">
+              {customers.map((c) => {
+                const activeLoan = c.loans[0];
+                return (
+                  <div key={c.id} onClick={() => router.push(`/admin/customers/${c.id}`)} className="p-4 space-y-3 active:bg-surface transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-black text-tertiary">{c.name}</p>
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{c.customerId}</p>
+                      </div>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                      <div>
+                        <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Loan Type</p>
+                        <p className="text-xs font-bold text-on-surface capitalize">{activeLoan?.loanType.toLowerCase() || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Frequency</p>
+                        <p className="text-xs font-bold text-on-surface capitalize">{activeLoan?.frequency.toLowerCase() || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">EMI</p>
+                        <p className="text-sm font-black text-accent">{activeLoan ? `₹${activeLoan.emi.toLocaleString()}` : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-outline uppercase tracking-widest mb-0.5">Next Due</p>
+                        <p className="text-xs font-bold text-on-surface-variant">
+                          {activeLoan?.nextDueDate ? new Date(activeLoan.nextDueDate).toLocaleDateString() : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <table className="hidden sm:table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-low/50">
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-tertiary/70">Customer ID</th>

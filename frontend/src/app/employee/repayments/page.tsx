@@ -559,7 +559,89 @@ export default function RepaymentTracker() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            {/* Mobile Leaderboard Cards */}
+            <div className="block lg:hidden divide-y divide-outline-variant/5">
+              {repayments.map((r) => {
+                const isAnimating = animatingIds.has(r.id);
+                const isOverdue = r.status === 'OVERDUE';
+                const isCleared = r.status === 'CLEARED';
+                const paidPct = r.loanAmount > 0 ? Math.min(100, (r.totalPaid / r.loanAmount) * 100) : 0;
+                const isAutopayActive = r.subscriptionStatus === 'active';
+
+                return (
+                  <div 
+                    key={r.id} 
+                    className={`
+                      p-4 space-y-3 transition-all duration-700
+                      ${isAnimating ? 'bg-accent/10' : ''}
+                      ${isOverdue ? 'bg-error/5' : ''}
+                      ${isCleared ? 'opacity-50' : ''}
+                    `}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <RankBadge rank={r.rank ?? 0} />
+                        <div>
+                          <p className="font-bold text-tertiary leading-tight">{r.customerName}</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest">{r.customerId}</p>
+                        </div>
+                      </div>
+                      <StatusBadge status={r.status} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-surface-container-low/50 p-3 rounded-xl">
+                      <div>
+                        <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Outstanding</p>
+                        <p className={`text-sm font-black ${isOverdue ? 'text-error' : 'text-tertiary'}`}>₹{r.outstanding.toLocaleString('en-IN')}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">EMI Amount</p>
+                        <p className="text-sm font-black text-accent">₹{r.emi.toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-bold">
+                        <span className="text-on-surface-variant uppercase tracking-widest">Repayment Progress</span>
+                        <span className="text-tertiary">{paidPct.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-1000 ${isCleared ? 'bg-accent' : isOverdue ? 'bg-error' : 'bg-tertiary'}`}
+                          style={{ width: `${paidPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-end pt-1">
+                      <div>
+                        <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Next Due</p>
+                        <p className={`text-[10px] font-bold ${getDueDateColor(r)}`}>{isCleared ? '✓ Fully Repaid' : getDueDateLabel(r)}</p>
+                      </div>
+                      {!isCleared && (
+                        isAutopayActive ? (
+                          <span className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-tighter">
+                            <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>autorenew</span>
+                            Autopay
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setPaymentModal(r)}
+                            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-accent text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-accent/20 active:scale-95 transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">add_card</span>
+                            Record Pay
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Leaderboard Table */}
+            <table className="hidden lg:table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container/50">
                   <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-wider text-tertiary/70 w-12">Rank</th>

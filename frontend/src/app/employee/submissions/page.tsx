@@ -60,7 +60,56 @@ export default function SubmissionsPage() {
       ) : (
         <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            {/* Mobile Submission Cards */}
+            <div className="block sm:hidden divide-y divide-surface-container">
+              {submissions.map((s) => (
+                <div key={s.id} className="p-4 space-y-4 hover:bg-surface transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-tertiary">{s.customer?.name || 'Unknown'}</p>
+                      <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest">{s.customer?.customerId || 'N/A'}</p>
+                    </div>
+                    <StatusBadge status={s.status} />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Loan Type</p>
+                      <p className="text-xs text-tertiary capitalize font-bold">{s.loanType.toLowerCase()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Amount</p>
+                      <p className="text-sm font-black text-accent">₹{s.amount.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[10px] text-on-surface-variant">
+                    <p className="font-medium italic">Submitted: {new Date(s.createdAt).toLocaleDateString()}</p>
+                    <p className="opacity-60 font-mono">{new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+
+                  {s.status === 'QUERIED' && (
+                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">info</span>
+                        Admin Query
+                      </p>
+                      <p className="text-xs text-blue-700 italic mb-3 leading-relaxed">“{s.queryDescription}”</p>
+                      <a 
+                        href={`/employee/loan-form/vehicle?editId=${s.id}`} 
+                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">edit</span>
+                        Fix Application
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Submission Table */}
+            <table className="hidden sm:table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-low/50">
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-tertiary/70">Customer</th>

@@ -192,63 +192,111 @@ export default function Section9DocumentChecklist({ formData, updateFormData }: 
           <span className="material-symbols-outlined text-accent text-base">badge</span>
           KYC Documents Verification
         </h4>
-        <div className="overflow-x-auto rounded-xl border border-outline-variant/20">
-          <table className="w-full min-w-[700px]">
-            <thead className="bg-surface-container-high">
-              <tr>
-                <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Document</th>
-                <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest border-l border-outline-variant/10">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center">A</div>
-                    Applicant
+        <div className="rounded-xl border border-outline-variant/20 overflow-hidden">
+          {/* Mobile Stacked View */}
+          <div className="block lg:hidden divide-y divide-outline-variant/10">
+            {KYC_DOCS.map((doc, idx) => {
+              const entry = formData.kycDocuments[doc.key];
+              return (
+                <div key={doc.key} className="p-4 space-y-4 bg-surface-container-lowest">
+                  <span className="text-sm text-tertiary font-black uppercase tracking-widest">{doc.label}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {[
+                      { label: 'Applicant', bg: 'bg-primary', checked: entry.applicantChecked, docNo: entry.applicantDocNo, onCheck: (v: boolean) => updateKyc(doc.key, { applicantChecked: v }), onDocNo: (v: string) => updateKyc(doc.key, { applicantDocNo: v }) },
+                      { label: 'Co-Applicant', bg: 'bg-secondary', checked: entry.coApplicantChecked, docNo: entry.coApplicantDocNo, onCheck: (v: boolean) => updateKyc(doc.key, { coApplicantChecked: v }), onDocNo: (v: string) => updateKyc(doc.key, { coApplicantDocNo: v }) },
+                      { label: 'Guarantor', bg: 'bg-tertiary', checked: entry.guarantorChecked, docNo: entry.guarantorDocNo, onCheck: (v: boolean) => updateKyc(doc.key, { guarantorChecked: v }), onDocNo: (v: string) => updateKyc(doc.key, { guarantorDocNo: v }) },
+                    ].map((party) => (
+                      <div key={party.label} className="p-3 bg-surface-container/30 rounded-xl border border-outline-variant/5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded-full ${party.bg} text-white text-[8px] font-black flex items-center justify-center`}>{party.label.charAt(0)}</div>
+                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{party.label}</span>
+                          </div>
+                          <div
+                            onClick={() => party.onCheck(!party.checked)}
+                            className={`w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
+                              party.checked ? 'bg-accent border-accent' : 'border-outline-variant'
+                            }`}
+                          >
+                            {party.checked && <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1", fontSize: '10px' }}>check</span>}
+                          </div>
+                        </div>
+                        {party.checked && (
+                          <input
+                            type="text"
+                            value={party.docNo}
+                            onChange={e => party.onDocNo(e.target.value)}
+                            placeholder="Doc. No."
+                            className="w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-lg px-2 py-1.5 text-[10px] font-bold text-on-surface outline-none focus:ring-1 focus:ring-accent/30 transition-all"
+                          />
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </th>
-                <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest border-l border-outline-variant/10">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 rounded-full bg-secondary text-white text-[8px] font-bold flex items-center justify-center">C</div>
-                    Co-Applicant
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest border-l border-outline-variant/10">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 rounded-full bg-tertiary text-white text-[8px] font-bold flex items-center justify-center">G</div>
-                    Guarantor
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {KYC_DOCS.map((doc, idx) => {
-                const entry = formData.kycDocuments[doc.key];
-                const rowBg = idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container/20';
-                return (
-                  <tr key={doc.key} className={`${rowBg} border-t border-outline-variant/10`}>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-on-surface font-medium">{doc.label}</span>
-                    </td>
-                    <KycCheckCell
-                      checked={entry.applicantChecked}
-                      docNo={entry.applicantDocNo}
-                      onCheck={v => updateKyc(doc.key, { applicantChecked: v })}
-                      onDocNo={v => updateKyc(doc.key, { applicantDocNo: v })}
-                    />
-                    <KycCheckCell
-                      checked={entry.coApplicantChecked}
-                      docNo={entry.coApplicantDocNo}
-                      onCheck={v => updateKyc(doc.key, { coApplicantChecked: v })}
-                      onDocNo={v => updateKyc(doc.key, { coApplicantDocNo: v })}
-                    />
-                    <KycCheckCell
-                      checked={entry.guarantorChecked}
-                      docNo={entry.guarantorDocNo}
-                      onCheck={v => updateKyc(doc.key, { guarantorChecked: v })}
-                      onDocNo={v => updateKyc(doc.key, { guarantorDocNo: v })}
-                    />
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+              <thead className="bg-surface-container-high">
+                <tr>
+                  <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Document</th>
+                  <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest border-l border-outline-variant/10">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center">A</div>
+                      Applicant
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest border-l border-outline-variant/10">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded-full bg-secondary text-white text-[8px] font-bold flex items-center justify-center">C</div>
+                      Co-Applicant
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest border-l border-outline-variant/10">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded-full bg-tertiary text-white text-[8px] font-bold flex items-center justify-center">G</div>
+                      Guarantor
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {KYC_DOCS.map((doc, idx) => {
+                  const entry = formData.kycDocuments[doc.key];
+                  const rowBg = idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container/20';
+                  return (
+                    <tr key={doc.key} className={`${rowBg} border-t border-outline-variant/10`}>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-on-surface font-medium">{doc.label}</span>
+                      </td>
+                      <KycCheckCell
+                        checked={entry.applicantChecked}
+                        docNo={entry.applicantDocNo}
+                        onCheck={v => updateKyc(doc.key, { applicantChecked: v })}
+                        onDocNo={v => updateKyc(doc.key, { applicantDocNo: v })}
+                      />
+                      <KycCheckCell
+                        checked={entry.coApplicantChecked}
+                        docNo={entry.coApplicantDocNo}
+                        onCheck={v => updateKyc(doc.key, { coApplicantChecked: v })}
+                        onDocNo={v => updateKyc(doc.key, { coApplicantDocNo: v })}
+                      />
+                      <KycCheckCell
+                        checked={entry.guarantorChecked}
+                        docNo={entry.guarantorDocNo}
+                        onCheck={v => updateKyc(doc.key, { guarantorChecked: v })}
+                        onDocNo={v => updateKyc(doc.key, { guarantorDocNo: v })}
+                      />
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

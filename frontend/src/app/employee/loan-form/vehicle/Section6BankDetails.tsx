@@ -87,24 +87,70 @@ export default function Section6BankDetails({ formData, updateFormData }: Props)
         <span className="font-bold text-on-surface">Note:</span> Bank account details for Applicant and Co-Applicant. At minimum, fill in the Applicant&apos;s bank name and account number.
       </p>
 
-      <div className="overflow-x-auto rounded-xl border border-outline-variant/20">
-        <table className="w-full min-w-[900px]">
-          <tbody>
-            <BankRow
-              label="Applicant"
-              color="bg-primary"
-              bank={formData.applicantBank}
-              onChange={updates => updateFormData({ applicantBank: { ...formData.applicantBank, ...updates } })}
-            />
-            <tr className="h-2 bg-surface-container" />
-            <BankRow
-              label="Co-Applicant"
-              color="bg-secondary"
-              bank={formData.coApplicantBank}
-              onChange={updates => updateFormData({ coApplicantBank: { ...formData.coApplicantBank, ...updates } })}
-            />
-          </tbody>
-        </table>
+      <div className="rounded-xl border border-outline-variant/20 overflow-hidden">
+        {/* Mobile Stacked View */}
+        <div className="block lg:hidden divide-y divide-outline-variant/10">
+          {[
+            { label: 'Applicant', color: 'bg-primary', bank: formData.applicantBank, updateKey: 'applicantBank' as const },
+            { label: 'Co-Applicant', color: 'bg-secondary', bank: formData.coApplicantBank, updateKey: 'coApplicantBank' as const },
+          ].map(({ label, color, bank, updateKey }) => (
+            <div key={label} className="p-4 space-y-4">
+              <div className={`px-3 py-1.5 rounded-lg flex items-center gap-2 w-fit ${color}`}>
+                <span className="material-symbols-outlined text-white text-sm">account_balance</span>
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">{label}</span>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Account Type</label>
+                  <select
+                    value={bank.accountType}
+                    onChange={e => updateFormData({ [updateKey]: { ...bank, accountType: e.target.value as AccountType } })}
+                    className={inputCls}
+                  >
+                    <option value="">Select...</option>
+                    {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                {COLUMNS.map(col => (
+                  <div key={col.key}>
+                    <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                      {col.label}{col.required && <span className="text-error ml-0.5">*</span>}
+                    </label>
+                    <input
+                      type={col.type}
+                      value={bank[col.key as keyof BankAccountDetails] as string}
+                      onChange={e => updateFormData({ [updateKey]: { ...bank, [col.key]: e.target.value } })}
+                      className={inputCls}
+                      placeholder={col.type === 'number' ? '0.00' : ''}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full min-w-[900px]">
+            <tbody>
+              <BankRow
+                label="Applicant"
+                color="bg-primary"
+                bank={formData.applicantBank}
+                onChange={updates => updateFormData({ applicantBank: { ...formData.applicantBank, ...updates } })}
+              />
+              <tr className="h-2 bg-surface-container" />
+              <BankRow
+                label="Co-Applicant"
+                color="bg-secondary"
+                bank={formData.coApplicantBank}
+                onChange={updates => updateFormData({ coApplicantBank: { ...formData.coApplicantBank, ...updates } })}
+              />
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Summary Cards */}

@@ -32,22 +32,18 @@ function VehicleOwnedTable({
         <span className="material-symbols-outlined text-white text-sm">directions_car</span>
         <span className="text-xs font-bold text-white uppercase tracking-wider">{label} — Vehicles Owned</span>
       </div>
-      <div className="overflow-x-auto border border-outline-variant/20 border-t-0 rounded-b-xl">
-        <table className="w-full min-w-[700px]">
-          <thead className="bg-surface-container-high">
-            <tr>
-              {['#', 'Vehicle', 'Registration No.', 'Make & Model', 'Declared Value (₹)', 'Financed By'].map(h => (
-                <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {vehicles.map((v, idx) => (
-              <tr key={idx} className="border-t border-outline-variant/10 hover:bg-surface-container/30 transition-colors">
-                <td className="px-3 py-3 text-xs font-bold text-on-surface-variant">{idx + 1}</td>
-                <td className="px-3 py-3">
+      <div className="rounded-b-xl border border-outline-variant/20 border-t-0 overflow-hidden">
+        {/* Mobile Stacked View */}
+        <div className="block lg:hidden divide-y divide-outline-variant/10">
+          {vehicles.map((v, idx) => (
+            <div key={idx} className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Entry #{idx + 1}</span>
+                <span className="material-symbols-outlined text-sm text-on-surface-variant/30">drag_indicator</span>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Vehicle Type</label>
                   <input
                     type="text"
                     value={v.vehicle}
@@ -55,8 +51,9 @@ function VehicleOwnedTable({
                     placeholder="e.g. Car, Bike"
                     className={inputCls}
                   />
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Registration No.</label>
                   <input
                     type="text"
                     value={v.registrationNo}
@@ -64,8 +61,9 @@ function VehicleOwnedTable({
                     placeholder="TN-XX-XX-XXXX"
                     className={inputCls}
                   />
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Make & Model</label>
                   <input
                     type="text"
                     value={v.makeModel}
@@ -73,8 +71,9 @@ function VehicleOwnedTable({
                     placeholder="Brand, Model"
                     className={inputCls}
                   />
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Declared Value (₹)</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-bold">₹</span>
                     <input
@@ -85,8 +84,9 @@ function VehicleOwnedTable({
                       className={`${inputCls} pl-7`}
                     />
                   </div>
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Financed By</label>
                   <input
                     type="text"
                     value={v.financedBy}
@@ -94,11 +94,81 @@ function VehicleOwnedTable({
                     placeholder="Bank / Self"
                     className={inputCls}
                   />
-                </td>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead className="bg-surface-container-high">
+              <tr>
+                {['#', 'Vehicle', 'Registration No.', 'Make & Model', 'Declared Value (₹)', 'Financed By'].map(h => (
+                  <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {vehicles.map((v, idx) => (
+                <tr key={idx} className="border-t border-outline-variant/10 hover:bg-surface-container/30 transition-colors">
+                  <td className="px-3 py-3 text-xs font-bold text-on-surface-variant">{idx + 1}</td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={v.vehicle}
+                      onChange={e => updateRow(idx, { vehicle: e.target.value })}
+                      placeholder="e.g. Car, Bike"
+                      className={inputCls}
+                    />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={v.registrationNo}
+                      onChange={e => updateRow(idx, { registrationNo: e.target.value })}
+                      placeholder="TN-XX-XX-XXXX"
+                      className={inputCls}
+                    />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={v.makeModel}
+                      onChange={e => updateRow(idx, { makeModel: e.target.value })}
+                      placeholder="Brand, Model"
+                      className={inputCls}
+                    />
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-bold">₹</span>
+                      <input
+                        type="number"
+                        value={v.declaredValue}
+                        onChange={e => updateRow(idx, { declaredValue: e.target.value })}
+                        placeholder="0"
+                        className={`${inputCls} pl-7`}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={v.financedBy}
+                      onChange={e => updateRow(idx, { financedBy: e.target.value })}
+                      placeholder="Bank / Self"
+                      className={inputCls}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       <p className="text-[10px] text-on-surface-variant mt-1.5 flex items-center gap-1">
         <span className="material-symbols-outlined text-sm text-accent">info</span>
@@ -129,22 +199,25 @@ function ImmovablePropertyTable({
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-xl border border-outline-variant/20">
-        <table className="w-full min-w-[700px]">
-          <thead className="bg-surface-container-high">
-            <tr>
-              {['#', 'Asset Type', 'Built-up Area (Sq.ft/Acres)', 'Land Area / UDS', 'Declared Value (₹)', ''].map(h => (
-                <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {properties.map((prop, idx) => (
-              <tr key={idx} className="border-t border-outline-variant/10 hover:bg-surface-container/30 transition-colors">
-                <td className="px-3 py-3 text-xs font-bold text-on-surface-variant">{idx + 1}</td>
-                <td className="px-3 py-3 min-w-[180px]">
+      <div className="rounded-xl border border-outline-variant/20 overflow-hidden">
+        {/* Mobile Stacked View */}
+        <div className="block lg:hidden divide-y divide-outline-variant/10">
+          {properties.map((prop, idx) => (
+            <div key={idx} className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Property #{idx + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removeRow(idx)}
+                  disabled={properties.length === 1}
+                  className="w-7 h-7 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Asset Type</label>
                   <select
                     value={prop.assetType}
                     onChange={e => updateRow(idx, { assetType: e.target.value as ImmovableAssetType })}
@@ -162,8 +235,9 @@ function ImmovablePropertyTable({
                       className={`${inputCls} mt-1`}
                     />
                   )}
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Built-up Area</label>
                   <input
                     type="text"
                     value={prop.builtUpArea}
@@ -171,8 +245,9 @@ function ImmovablePropertyTable({
                     placeholder="e.g. 1200 sq.ft"
                     className={inputCls}
                   />
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Land Area / UDS</label>
                   <input
                     type="text"
                     value={prop.landArea}
@@ -180,8 +255,9 @@ function ImmovablePropertyTable({
                     placeholder="e.g. 0.5 acres"
                     className={inputCls}
                   />
-                </td>
-                <td className="px-3 py-3">
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Declared Value (₹)</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-bold">₹</span>
                     <input
@@ -191,21 +267,91 @@ function ImmovablePropertyTable({
                       className={`${inputCls} pl-7`}
                     />
                   </div>
-                </td>
-                <td className="px-3 py-3">
-                  <button
-                    type="button"
-                    onClick={() => removeRow(idx)}
-                    disabled={properties.length === 1}
-                    className="w-7 h-7 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <span className="material-symbols-outlined text-sm">delete</span>
-                  </button>
-                </td>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead className="bg-surface-container-high">
+              <tr>
+                {['#', 'Asset Type', 'Built-up Area (Sq.ft/Acres)', 'Land Area / UDS', 'Declared Value (₹)', ''].map(h => (
+                  <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {properties.map((prop, idx) => (
+                <tr key={idx} className="border-t border-outline-variant/10 hover:bg-surface-container/30 transition-colors">
+                  <td className="px-3 py-3 text-xs font-bold text-on-surface-variant">{idx + 1}</td>
+                  <td className="px-3 py-3 min-w-[180px]">
+                    <select
+                      value={prop.assetType}
+                      onChange={e => updateRow(idx, { assetType: e.target.value as ImmovableAssetType })}
+                      className={`${inputCls} appearance-none`}
+                    >
+                      <option value="">Select Type</option>
+                      {IMMOVABLE_ASSET_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    {prop.assetType === 'Others' && (
+                      <input
+                        type="text"
+                        value={prop.assetTypeOther}
+                        onChange={e => updateRow(idx, { assetTypeOther: e.target.value })}
+                        placeholder="Specify..."
+                        className={`${inputCls} mt-1`}
+                      />
+                    )}
+                  </td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={prop.builtUpArea}
+                      onChange={e => updateRow(idx, { builtUpArea: e.target.value })}
+                      placeholder="e.g. 1200 sq.ft"
+                      className={inputCls}
+                    />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={prop.landArea}
+                      onChange={e => updateRow(idx, { landArea: e.target.value })}
+                      placeholder="e.g. 0.5 acres"
+                      className={inputCls}
+                    />
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-bold">₹</span>
+                      <input
+                        type="number"
+                        value={prop.declaredValue}
+                        onChange={e => updateRow(idx, { declaredValue: e.target.value })}
+                        className={`${inputCls} pl-7`}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <button
+                      type="button"
+                      onClick={() => removeRow(idx)}
+                      disabled={properties.length === 1}
+                      className="w-7 h-7 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       <button
         type="button"

@@ -239,7 +239,28 @@ export default function CustomerDetailPage() {
 
                 <div className="mb-4 text-tertiary font-bold tracking-widest uppercase">Payment History</div>
                 
-                <table className="w-full text-left mb-6 whitespace-nowrap">
+                {/* Mobile Payment Cards */}
+                <div className="block sm:hidden divide-y divide-outline-variant/10">
+                  {activeLoan.repayments.length === 0 ? (
+                    <div className="py-8 text-center text-on-surface-variant font-bold">No repayment records found.</div>
+                  ) : (
+                    activeLoan.repayments.map((p) => (
+                      <div key={p.id} className="py-4 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <p className="text-xs font-black text-accent">{new Date(p.paidAt).toLocaleDateString()}</p>
+                          <span className={`text-[10px] font-black uppercase tracking-tighter ${p.status === 'SUCCESS' ? 'text-accent' : 'text-on-surface-variant'}`}>{p.status}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-black text-tertiary">₹{p.amount.toLocaleString()}</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono uppercase">{p.method}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Desktop Payment Table */}
+                <table className="hidden sm:table w-full text-left mb-6 whitespace-nowrap">
                   <thead>
                     <tr className="border-y-2 border-outline-variant/20 text-on-surface-variant">
                       <th className="py-2.5 font-bold">Date</th>
@@ -358,7 +379,38 @@ export default function CustomerDetailPage() {
 
       {activeTab === 'audit-trail' && (
         <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left">
+          {/* Mobile Audit Cards */}
+          <div className="block lg:hidden divide-y divide-outline-variant/10">
+            {customer.auditLogs.length === 0 ? (
+              <div className="py-12 text-center text-on-surface-variant font-bold">No audit logs found.</div>
+            ) : (
+              customer.auditLogs.map((log) => (
+                <div key={log.id} className="p-4 space-y-3 hover:bg-surface transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] text-on-surface-variant font-mono font-bold">{new Date(log.createdAt).toLocaleString()}</p>
+                      <p className="text-xs font-black text-tertiary mt-0.5">{log.changedBy?.name || 'Admin'}</p>
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-widest bg-surface-container-high px-2 py-0.5 rounded text-on-surface-variant">{log.field}</span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-surface-container-low p-2.5 rounded-lg border border-outline-variant/10">
+                    <div className="flex-1">
+                      <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Old</p>
+                      <p className="text-xs text-error font-medium line-through truncate">{log.oldValue}</p>
+                    </div>
+                    <span className="material-symbols-outlined text-sm text-on-surface-variant">arrow_forward</span>
+                    <div className="flex-1">
+                      <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">New</p>
+                      <p className="text-xs text-accent font-black truncate">{log.newValue}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Audit Table */}
+          <table className="hidden lg:table w-full text-left">
             <thead>
               <tr className="bg-surface-container-low/50">
                 <th className="px-6 py-4 text-[10px] uppercase font-bold text-tertiary/60">Date & Time</th>

@@ -320,43 +320,81 @@ function ExpenseTable({ month, year, onSummaryRefresh }: { month: number; year: 
       </div>
       <div className="overflow-x-auto min-h-[200px]">
         {loading ? <Skeleton /> : expenses.length === 0 ? <Empty message="No expense entries yet — add your first one" /> : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-surface-container/50 text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Description</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4">Period</th>
-                <th className="px-6 py-4">Added By</th>
-                <th className="px-6 py-4 w-20" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant/10">
+          <>
+            {/* Mobile Cards */}
+            <div className="block lg:hidden divide-y divide-outline-variant/5">
               {expenses.map(e => (
-                <tr key={e.id} className="hover:bg-surface/60 transition-colors">
-                  <td className="px-6 py-4 text-on-surface-variant text-xs">{fmtDate(e.date)}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{e.category}</span>
-                  </td>
-                  <td className="px-6 py-4 text-on-surface-variant">{e.description}</td>
-                  <td className="px-6 py-4 text-right font-black text-error">{fmt(e.amount)}</td>
-                  <td className="px-6 py-4 text-[10px] text-on-surface-variant">{e.period}</td>
-                  <td className="px-6 py-4 text-[10px] text-on-surface-variant">{e.addedBy}</td>
-                  <td className="px-6 py-4">
+                <div key={e.id} className="p-4 space-y-3 hover:bg-surface/60 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-tighter">{e.category}</span>
+                      <p className="font-bold text-on-surface mt-1.5">{e.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-error text-base">{fmt(e.amount)}</p>
+                      <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-widest">{e.period}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-on-surface-variant font-medium">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => openEdit(e)} className="text-on-surface-variant hover:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-xs">calendar_today</span>
+                      {fmtDate(e.date)}
+                      <span className="mx-1 opacity-20">|</span>
+                      <span className="material-symbols-outlined text-xs">person</span>
+                      {e.addedBy}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => openEdit(e)} className="p-1.5 rounded-lg bg-surface-container-high text-primary active:scale-90 transition-all">
                         <span className="material-symbols-outlined text-base">edit</span>
                       </button>
-                      <button onClick={() => handleDelete(e.id)} className="text-on-surface-variant hover:text-error transition-colors">
+                      <button onClick={() => handleDelete(e.id)} className="p-1.5 rounded-lg bg-error/10 text-error active:scale-90 transition-all">
                         <span className="material-symbols-outlined text-base">delete</span>
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop Table */}
+            <table className="hidden lg:table w-full text-left text-sm">
+              <thead className="bg-surface-container/50 text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Description</th>
+                  <th className="px-6 py-4 text-right">Amount</th>
+                  <th className="px-6 py-4">Period</th>
+                  <th className="px-6 py-4">Added By</th>
+                  <th className="px-6 py-4 w-20" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {expenses.map(e => (
+                  <tr key={e.id} className="hover:bg-surface/60 transition-colors">
+                    <td className="px-6 py-4 text-on-surface-variant text-xs">{fmtDate(e.date)}</td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{e.category}</span>
+                    </td>
+                    <td className="px-6 py-4 text-on-surface-variant">{e.description}</td>
+                    <td className="px-6 py-4 text-right font-black text-error">{fmt(e.amount)}</td>
+                    <td className="px-6 py-4 text-[10px] text-on-surface-variant">{e.period}</td>
+                    <td className="px-6 py-4 text-[10px] text-on-surface-variant">{e.addedBy}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => openEdit(e)} className="text-on-surface-variant hover:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-base">edit</span>
+                        </button>
+                        <button onClick={() => handleDelete(e.id)} className="text-on-surface-variant hover:text-error transition-colors">
+                          <span className="material-symbols-outlined text-base">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 
@@ -543,7 +581,45 @@ function InvestmentTable({ month, year, onRefresh }: { month: number, year: numb
         </h3>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        {/* Mobile Cards */}
+        <div className="block lg:hidden divide-y divide-outline-variant/5">
+          {items.length === 0 ? (
+            <div className="px-6 py-12 text-center text-on-surface-variant text-sm font-medium italic">
+              No transactions recorded this month.
+            </div>
+          ) : (
+            items.map((item) => (
+              <div key={item.id} className="p-4 space-y-3 hover:bg-surface-container-lowest/50 transition-colors">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
+                      item.type === 'INVESTMENT' ? 'bg-blue-100 text-blue-700' :
+                      item.type === 'PROFIT' ? 'bg-accent/20 text-accent' :
+                      'bg-error/10 text-error'
+                    }`}>
+                      {item.type}
+                    </span>
+                    <p className="text-xs font-bold text-on-surface mt-1.5">{item.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-base font-black ${item.type === 'PROFIT' ? 'text-accent' : 'text-on-surface'}`}>
+                      {fmt(item.amount)}
+                    </p>
+                    <p className="text-[9px] text-on-surface-variant font-bold">{new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => handleDelete(item.id)} className="p-2 rounded-xl bg-error/5 text-error active:scale-90 transition-all">
+                    <span className="material-symbols-outlined text-base">delete</span>
+                  </button>
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+
+        {/* Desktop Table */}
+        <table className="hidden lg:table w-full text-left">
           <thead>
             <tr className="bg-surface-container-low border-b border-outline-variant/10">
               <th className="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Date</th>

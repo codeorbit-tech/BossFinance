@@ -304,7 +304,31 @@ export default function NotificationsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              {/* Mobile Notification Cards */}
+              <div className="block sm:hidden divide-y divide-outline-variant/5">
+                {history.map(n => (
+                  <div key={n.id} className="p-4 space-y-3 hover:bg-surface/60 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-tertiary">{n.customer.name}</p>
+                        <p className="text-[10px] text-on-surface-variant">{n.customer.customerId}</p>
+                      </div>
+                      <StatusBadge status={n.status} />
+                    </div>
+                    <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="material-symbols-outlined text-sm text-accent">{CHANNEL_ICON[n.channel] || 'sms'}</span>
+                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{n.template}</span>
+                      </div>
+                      <p className="text-xs text-tertiary leading-relaxed line-clamp-3">{n.message}</p>
+                    </div>
+                    <p className="text-[10px] text-on-surface-variant font-mono text-right">{formatTime(n.sentAt)}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Notification Table */}
+              <table className="hidden sm:table w-full text-left text-sm">
                 <thead className="bg-surface-container/50 text-on-surface-variant font-bold uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="px-6 py-4">Customer</th>
