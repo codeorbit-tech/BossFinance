@@ -109,7 +109,8 @@ function CustomersList() {
           ) : customers.length === 0 ? (
             <div className="p-12 text-center text-on-surface-variant font-bold">No customers found.</div>
           ) : (
-            <div className="block sm:hidden divide-y divide-surface-container">
+            <>
+              <div className="block sm:hidden divide-y divide-surface-container">
               {customers.map((c) => {
                 const activeLoan = c.loans[0];
                 return (
@@ -180,6 +181,7 @@ function CustomersList() {
                 })}
               </tbody>
             </table>
+            </>
           )}
         </div>
         {!isLoading && totalPages > 1 && (

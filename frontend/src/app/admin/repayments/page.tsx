@@ -793,8 +793,9 @@ export default function RepaymentTracker() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            {/* Mobile Leaderboard Cards */}
-            <div className="block sm:hidden divide-y divide-outline-variant/5">
+            <>
+              {/* Mobile Leaderboard Cards */}
+              <div className="block sm:hidden divide-y divide-outline-variant/5">
               {repayments.map((r) => {
                 const isAnimating = animatingIds.has(r.id);
                 const paidPct = r.loanAmount > 0 ? Math.min(100, (r.totalPaid / r.loanAmount) * 100) : 0;
@@ -1025,6 +1026,7 @@ export default function RepaymentTracker() {
                 })}
               </tbody>
             </table>
+            </>
           </div>
         )}
 

@@ -559,8 +559,9 @@ export default function RepaymentTracker() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            {/* Mobile Leaderboard Cards */}
-            <div className="block lg:hidden divide-y divide-outline-variant/5">
+            <>
+              {/* Mobile Leaderboard Cards */}
+              <div className="block lg:hidden divide-y divide-outline-variant/5">
               {repayments.map((r) => {
                 const isAnimating = animatingIds.has(r.id);
                 const isOverdue = r.status === 'OVERDUE';
@@ -779,6 +780,7 @@ export default function RepaymentTracker() {
                 })}
               </tbody>
             </table>
+            </>
           </div>
         )}
 

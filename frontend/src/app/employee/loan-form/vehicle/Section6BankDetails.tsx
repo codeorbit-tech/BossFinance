@@ -20,13 +20,14 @@ const COLUMNS = [
   { key: 'avgCreditPerMonth', label: 'Avg. Credit / Month (₹)', type: 'number' },
 ];
 
+const inputCls = `w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-lg px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all`;
+
 function BankRow({
   label, color, bank, onChange
 }: {
   label: string; color: string; bank: BankAccountDetails;
   onChange: (updates: Partial<BankAccountDetails>) => void;
 }) {
-  const inputCls = `w-full bg-surface-container-high border border-transparent focus:border-accent/40 rounded-lg px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-2 focus:ring-accent/30 transition-all`;
 
   return (
     <>

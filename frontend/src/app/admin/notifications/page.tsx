@@ -304,8 +304,9 @@ export default function NotificationsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              {/* Mobile Notification Cards */}
-              <div className="block sm:hidden divide-y divide-outline-variant/5">
+              <>
+                {/* Mobile Notification Cards */}
+                <div className="block sm:hidden divide-y divide-outline-variant/5">
                 {history.map(n => (
                   <div key={n.id} className="p-4 space-y-3 hover:bg-surface/60 transition-colors">
                     <div className="flex justify-between items-start">
@@ -360,6 +361,7 @@ export default function NotificationsPage() {
                   ))}
                 </tbody>
               </table>
+              </>
             </div>
           )}
 

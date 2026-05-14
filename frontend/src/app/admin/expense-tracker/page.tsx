@@ -581,8 +581,9 @@ function InvestmentTable({ month, year, onRefresh }: { month: number, year: numb
         </h3>
       </div>
       <div className="overflow-x-auto">
-        {/* Mobile Cards */}
-        <div className="block lg:hidden divide-y divide-outline-variant/5">
+        <>
+          {/* Mobile Cards */}
+          <div className="block lg:hidden divide-y divide-outline-variant/5">
           {items.length === 0 ? (
             <div className="px-6 py-12 text-center text-on-surface-variant text-sm font-medium italic">
               No transactions recorded this month.
@@ -665,6 +666,7 @@ function InvestmentTable({ month, year, onRefresh }: { month: number, year: numb
             )}
           </tbody>
         </table>
+        </>
       </div>
     </div>
   );
