@@ -11,6 +11,18 @@ const nextConfig = {
       }
     ]
   },
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        fs: false,
+        path: false,
+        os: false,
+        child_process: false,
+        readline: false,
+        rimraf: false,
+      },
+    },
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

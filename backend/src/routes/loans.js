@@ -113,7 +113,7 @@ router.get('/', authenticate, async (req, res) => {
         take: parseInt(limit),
         orderBy: { createdAt: 'desc' },
         include: {
-          customer: { select: { customerId: true, name: true, phone: true } },
+          customer: { select: { customerId: true, name: true, phone: true, aadhaar: true, pan: true } },
           createdBy: { select: { name: true } },
         },
       }),

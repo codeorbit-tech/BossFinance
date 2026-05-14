@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import StatusBadge from '@/components/StatusBadge';
 import Pagination from '@/components/Pagination';
 import { loansApi, cashfreeApi } from '@/lib/api';
@@ -11,6 +11,9 @@ interface LoanApplication {
   customer: {
     customerId: string;
     name: string;
+    phone?: string;
+    aadhaar?: string;
+    pan?: string;
   };
   loanType: string;
   amount: number;
@@ -22,10 +25,16 @@ interface LoanApplication {
   };
   status: string;
   pdfUrl: string | null;
+  fullData?: string | null;
   queryDescription?: string;
   subscriptionStatus?: string | null;
   razorpaySubscriptionId?: string | null;
   subscriptionShortUrl?: string | null;
+  frequency?: string;
+  interestRate?: number;
+  purpose?: string;
+  guarantorName?: string;
+  guarantorPhone?: string;
 }
 
 // ─── Autopay Status Badge ──────────────────────────────────────────────────────
@@ -236,13 +245,358 @@ function AutopayModal({
   );
 }
 
+// ─── Field Row Helper ─────────────────────────────────────────────────────────
+function FieldRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
+  if (!value && value !== 0 && value !== false) return null;
+  const display = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value);
+  return (
+    <div>
+      <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-on-surface break-words">{display}</p>
+    </div>
+  );
+}
+
+function SectionCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  const hasContent = Array.isArray(children)
+    ? (children as React.ReactNode[]).some(Boolean)
+    : !!children;
+  if (!hasContent) return null;
+  return (
+    <div className="bg-surface-container-low rounded-2xl border border-outline-variant/10 overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-outline-variant/10 bg-surface-container">
+        <span className="material-symbols-outlined text-accent text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+        <h4 className="text-xs font-black text-tertiary uppercase tracking-wider">{title}</h4>
+      </div>
+      <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-4">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── Loan Detail Modal ─────────────────────────────────────────────────────────
+function LoanDetailModal({ 
+  loan, 
+  onClose,
+  onApprove,
+  onQuery
+}: { 
+  loan: LoanApplication; 
+  onClose: () => void;
+  onApprove: (id: string) => void;
+  onQuery: (loan: LoanApplication) => void;
+}) {
+  const raw = (() => {
+    try { 
+      if (!loan.fullData) return null;
+      let parsed = JSON.parse(loan.fullData);
+      // Handle double serialization
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed);
+      }
+      return parsed;
+    } catch { 
+      return null; 
+    }
+  })();
+
+  const f = raw || {};
+
+  // Detect loan type category
+  const isSimple = ['DAILY', 'WEEKLY'].includes(f.frequency || loan.frequency || '');
+  const isVehicle = loan.loanType === 'VEHICLE';
+  const isHome = loan.loanType === 'HOME';
+
+  // For vehicle loans the data lives inside nested objects
+  const ap = f.applicantPersonal || {};
+  const ac = f.applicantContact || {};
+  const ab = f.applicantBank || {};
+  const gp = f.guarantorPersonal || {};
+  const gc = f.guarantorContact || {};
+  const ld = f.loanDetails || {};
+
+  const fmtName = (p: Record<string, string>) =>
+    [p?.firstName, p?.middleName, p?.lastName].filter(Boolean).join(' ');
+
+  const fmtAddr = (a: Record<string, string>) =>
+    [a?.fullAddress, a?.city, a?.district, a?.state, a?.pinCode].filter(Boolean).join(', ');
+
+  const applicantName    = f.applicantName || fmtName(ap) || loan.customer?.name || '—';
+  const applicantMobile  = f.mobile || ac?.mobile || loan.customer?.phone || '—';
+  const applicantAadhaar = f.aadhaarNo || f.aadhaar || loan.customer?.aadhaar || '—';
+  const applicantPAN     = f.panNo || f.pan || loan.customer?.pan || '—';
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-start justify-center p-4 pt-10 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden mb-10">
+        {/* Header */}
+        <div className="p-5 bg-gradient-to-br from-tertiary via-secondary to-primary text-white relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white -translate-y-1/2 translate-x-1/2" />
+          </div>
+          <div className="relative flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1">Loan Application Review</p>
+              <h3 className="text-lg font-black">{applicantName}</h3>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold capitalize">{loan.loanType?.toLowerCase()}</span>
+                <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold">₹{loan.amount?.toLocaleString('en-IN')}</span>
+                {loan.frequency && <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold capitalize">{loan.frequency?.toLowerCase()}</span>}
+                <span className="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-bold">{loan.tenure} {isSimple ? 'days/wks' : 'months'}</span>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+          {!raw ? (
+            <div className="text-center py-10 text-on-surface-variant">
+              <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">description</span>
+              <p className="text-sm font-bold">No detailed data available for this application.</p>
+              <p className="text-xs mt-1 opacity-60">This loan was created before full-data capture was enabled.</p>
+            </div>
+          ) : (
+            <>
+              {/* Loan Summary */}
+              <SectionCard title="Loan Details" icon="payments">
+                <FieldRow label="Form No" value={f.applicationFormNo || '—'} />
+                <FieldRow label="Application Date" value={f.applicationDate} />
+                <FieldRow label="Loan Type" value={loan.loanType} />
+                <FieldRow label="Loan Amount" value={loan.amount ? `₹${loan.amount.toLocaleString('en-IN')}` : (f.loanAmount ? `₹${parseFloat(f.loanAmount).toLocaleString('en-IN')}` : ld.loanAmount ? `₹${parseFloat(ld.loanAmount).toLocaleString('en-IN')}` : undefined)} />
+                <FieldRow label="EMI" value={loan.emi ? `₹${loan.emi.toLocaleString('en-IN')}` : (f.emi ? `₹${parseFloat(f.emi).toLocaleString('en-IN')}` : ld.emi ? `₹${parseFloat(ld.emi).toLocaleString('en-IN')}` : undefined)} />
+                <FieldRow label="Tenure" value={f.tenure || ld.tenure || loan.tenure} />
+                <FieldRow label="Interest Rate" value={f.interestRate || ld.interestRate || loan.interestRate} />
+                <FieldRow label="Frequency" value={f.frequency || loan.frequency} />
+                <FieldRow label="Purpose" value={f.purpose || loan.purpose} />
+              </SectionCard>
+
+              {/* Applicant */}
+              <SectionCard title="Applicant Details" icon="person">
+                <FieldRow label="Name" value={applicantName} />
+                <FieldRow label="Entity Type" value={f.applicantEntityType} />
+                <FieldRow label="Father / Husband" value={f.fatherHusbandName || (ap?.fatherFirstName ? `${ap.fatherFirstName} ${ap.fatherLastName || ''}`.trim() : undefined)} />
+                <FieldRow label="Mother's Name" value={ap?.motherFirstName ? `${ap.motherFirstName} ${ap.motherLastName || ''}`.trim() : undefined} />
+                <FieldRow label="Date of Birth" value={f.dob || ap?.dob} />
+                <FieldRow label="Gender" value={f.gender || ap?.gender} />
+                <FieldRow label="Mobile" value={applicantMobile} />
+                <FieldRow label="Alternate Mobile" value={f.alternateMobile || ac?.alternateMobile} />
+                <FieldRow label="Email" value={f.email || ac?.email} />
+                <FieldRow label="Aadhaar No" value={applicantAadhaar} />
+                <FieldRow label="PAN No" value={applicantPAN} />
+                <FieldRow label="CKYC ID" value={f.applicantCkycId} />
+                <FieldRow label="GSTIN" value={f.applicantGstin || f.gstNo} />
+                {f.udyamRegNo && <FieldRow label="Udyam Reg No" value={f.udyamRegNo} />}
+                <FieldRow label="Occupation" value={f.occupation} />
+                <FieldRow label="Religion" value={ap?.religion} />
+                <FieldRow label="Category" value={ap?.category} />
+                <FieldRow label="Preferred Language" value={ap?.preferredLanguage} />
+              </SectionCard>
+
+              {/* Address */}
+              <SectionCard title="Address" icon="location_on">
+                <FieldRow label="Address" value={f.address || f.communicationAddress || fmtAddr(ac?.communicationAddress)} />
+                <FieldRow label="Landmark" value={ac?.communicationAddress?.landmark} />
+                <FieldRow label="City" value={f.communicationCity || ac?.communicationAddress?.city} />
+                <FieldRow label="State" value={f.communicationState || ac?.communicationAddress?.state} />
+                <FieldRow label="Pincode" value={f.communicationPinCode || ac?.communicationAddress?.pinCode} />
+                {!f.permanentSameAsCommunication && !ac?.permanentSameAsCommunication && (
+                  <FieldRow label="Permanent Address" value={f.permanentAddress || fmtAddr(ac?.permanentAddress)} />
+                )}
+                <FieldRow label="Shop/Business Address" value={f.shopAddress || f.businessAddress} />
+              </SectionCard>
+
+              {/* Bank */}
+              <SectionCard title="Bank Details" icon="account_balance">
+                <FieldRow label="Bank Name" value={f.bankName || ab?.bankName || f.applicantBank?.bankName} />
+                <FieldRow label="Branch" value={f.branch || ab?.branch || f.applicantBank?.branch} />
+                <FieldRow label="Account No" value={f.accountNo || ab?.accountNo || f.applicantBank?.accountNo} />
+                <FieldRow label="Account Type" value={f.accountType || ab?.accountType || f.applicantBank?.accountType} />
+                <FieldRow label="IFSC Code" value={f.ifscCode || ab?.ifscCode || f.applicantBank?.ifscCode} />
+                <FieldRow label="Account Since" value={f.applicantBank?.accountSince} />
+                <FieldRow label="Avg Monthly Income" value={f.avgMonthlyIncome} />
+                <FieldRow label="Avg Debit/Month" value={f.applicantBank?.avgDebitPerMonth} />
+                <FieldRow label="Avg Credit/Month" value={f.applicantBank?.avgCreditPerMonth} />
+              </SectionCard>
+
+              {/* Business / Employment */}
+              {(f.shopName || f.businessName || f.employerName || f.designation || f.applicantEmployment?.establishmentName) && (
+                <SectionCard title="Business / Employment" icon="work">
+                  <FieldRow label="Establishment / Business" value={f.shopName || f.businessName || f.employerName || f.applicantEmployment?.establishmentName} />
+                  <FieldRow label="Designation" value={f.designation || f.applicantEmployment?.designation} />
+                  <FieldRow label="Business Type" value={f.businessType} />
+                  <FieldRow label="Years in Business" value={f.yearsInBusiness} />
+                  <FieldRow label="Annual Turnover" value={f.annualTurnover} />
+                  <FieldRow label="Monthly Income" value={f.monthlyIncome} />
+                  <FieldRow label="Years of Employment" value={f.yearsOfEmployment || f.applicantEmployment?.yearsOfEmployment} />
+                  <FieldRow label="Annual CTC" value={f.annualCTC || f.applicantEmployment?.ctcPerAnnum} />
+                </SectionCard>
+              )}
+
+              {/* Co-Applicant */}
+              {(f.coApplicantName || f.coApplicantPersonal?.firstName) && (
+                <SectionCard title="Co-Applicant" icon="group">
+                  <FieldRow label="Name" value={f.coApplicantName || fmtName(f.coApplicantPersonal)} />
+                  <FieldRow label="Entity Type" value={f.coApplicantEntityType} />
+                  <FieldRow label="Father / Husband" value={f.coApplicantFatherHusbandName || (f.coApplicantPersonal?.fatherFirstName ? `${f.coApplicantPersonal.fatherFirstName} ${f.coApplicantPersonal.fatherLastName || ''}`.trim() : undefined)} />
+                  <FieldRow label="Relation" value={f.coApplicantRelation} />
+                  <FieldRow label="Mobile" value={f.coApplicantMobile || f.coApplicantContact?.mobile} />
+                  <FieldRow label="Aadhaar No" value={f.coApplicantAadhaarNo} />
+                  <FieldRow label="PAN No" value={f.coApplicantPanNo} />
+                  <FieldRow label="CKYC ID" value={f.coApplicantCkycId} />
+                  <FieldRow label="GSTIN" value={f.coApplicantGstin} />
+                  <FieldRow label="Gender" value={f.coApplicantGender || f.coApplicantPersonal?.gender} />
+                  <FieldRow label="DOB" value={f.coApplicantDob || f.coApplicantPersonal?.dob} />
+                  <FieldRow label="Occupation" value={f.coApplicantOccupation} />
+                  <FieldRow label="Religion" value={f.coApplicantPersonal?.religion} />
+                  <FieldRow label="Category" value={f.coApplicantPersonal?.category} />
+                  <FieldRow label="Address" value={f.coApplicantAddress || fmtAddr(f.coApplicantContact?.communicationAddress)} />
+                  <FieldRow label="Bank Name" value={f.coApplicantBankName || f.coApplicantBank?.bankName} />
+                  <FieldRow label="Account No" value={f.coApplicantAccountNo || f.coApplicantBank?.accountNo} />
+                  <FieldRow label="IFSC Code" value={f.coApplicantIfscCode || f.coApplicantBank?.ifscCode} />
+                </SectionCard>
+              )}
+
+              {/* Guarantor */}
+              {(f.guarantorName || loan.guarantorName || gp?.firstName) && (
+                <SectionCard title="Guarantor" icon="verified_user">
+                  <FieldRow label="Name" value={f.guarantorName || loan.guarantorName || fmtName(gp)} />
+                  <FieldRow label="Entity Type" value={f.guarantorEntityType} />
+                  <FieldRow label="Father / Husband" value={f.guarantorFatherHusbandName || (gp?.fatherFirstName ? `${gp.fatherFirstName} ${gp.fatherLastName || ''}`.trim() : undefined)} />
+                  <FieldRow label="Relation" value={f.guarantorRelation} />
+                  <FieldRow label="Mobile" value={f.guarantorMobile || loan.guarantorPhone || gc?.mobile} />
+                  <FieldRow label="Aadhaar No" value={f.guarantorAadhaarNo} />
+                  <FieldRow label="PAN No" value={f.guarantorPanNo} />
+                  <FieldRow label="CKYC ID" value={f.guarantorCkycId} />
+                  <FieldRow label="GSTIN" value={f.guarantorGstin} />
+                  <FieldRow label="Gender" value={f.guarantorGender || gp?.gender} />
+                  <FieldRow label="DOB" value={f.guarantorDob || gp?.dob} />
+                  <FieldRow label="Religion" value={gp?.religion} />
+                  <FieldRow label="Category" value={gp?.category} />
+                  <FieldRow label="Occupation" value={f.guarantorOccupation} />
+                  <FieldRow label="Address" value={f.guarantorAddress || fmtAddr(gc?.communicationAddress)} />
+                </SectionCard>
+              )}
+
+              {/* Vehicle-specific */}
+              {isVehicle && f.applicantVehiclesOwned?.length > 0 && (
+                <SectionCard title="Vehicles Owned" icon="directions_car">
+                  {f.applicantVehiclesOwned.map((v: Record<string, string>, i: number) => (
+                    <FieldRow key={i} label={`Vehicle ${i + 1}`} value={[v.vehicle, v.makeModel, v.registrationNo].filter(Boolean).join(' | ')} />
+                  ))}
+                </SectionCard>
+              )}
+
+              {/* Residence & Education */}
+              {(f.applicantResidence?.residence || ap?.education) && (
+                <SectionCard title="Residence & Education" icon="home">
+                  <FieldRow label="Residence Type" value={f.applicantResidence?.residence} />
+                  <FieldRow label="Years of Stay" value={f.applicantResidence?.yearsOfStay} />
+                  <FieldRow label="Education" value={ap?.education} />
+                  <FieldRow label="Marital Status" value={ap?.maritalStatus} />
+                  <FieldRow label="Dependents" value={ap?.numberOfDependents} />
+                </SectionCard>
+              )}
+
+              {/* Property Details (Home / Vehicle) */}
+              {(f.propertyDetails || f.immovableProperties?.length > 0 || f.movablePropertyDescription) && (
+                <SectionCard title="Asset / Property Details" icon="real_estate_agent">
+                  {f.propertyDetails && (
+                    <>
+                      <FieldRow label="Property Type" value={f.propertyDetails?.propertyType} />
+                      <FieldRow label="Locality" value={f.propertyDetails?.locality} />
+                      <FieldRow label="Survey No" value={f.propertyDetails?.surveyNo} />
+                      <FieldRow label="Patta No" value={f.propertyDetails?.pattaNo} />
+                      <FieldRow label="Land Area" value={f.propertyDetails?.landArea} />
+                      <FieldRow label="Built-Up Area" value={f.propertyDetails?.builtUpArea} />
+                      <FieldRow label="Market Value" value={f.propertyDetails?.marketValue} />
+                    </>
+                  )}
+                  {f.movablePropertyDescription && (
+                    <>
+                      <FieldRow label="Movable Asset" value={f.movablePropertyDescription} />
+                      <FieldRow label="Movable Asset Value" value={f.movablePropertyValue} />
+                    </>
+                  )}
+                  {f.immovableProperties?.map((p: any, i: number) => (
+                    <div key={i} className="col-span-2 md:col-span-3 border-t border-outline-variant/20 pt-2 mt-2 first:border-0 first:pt-0 first:mt-0">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6">
+                        <FieldRow label={`Immovable Prop ${i+1}`} value={p.assetType === 'Others' ? p.assetTypeOther : p.assetType} />
+                        <FieldRow label="Land Area" value={p.landArea} />
+                        <FieldRow label="Built-Up Area" value={p.builtUpArea} />
+                        <FieldRow label="Declared Value" value={p.declaredValue} />
+                      </div>
+                    </div>
+                  ))}
+                </SectionCard>
+              )}
+
+              {/* KYC Documents Checklist */}
+              {f.kycDocuments && (
+                <SectionCard title="KYC Verification" icon="verified">
+                  {Object.entries(f.kycDocuments).map(([key, doc]: [string, any]) => (
+                     doc.applicantDocNo ? <FieldRow key={key} label={key.replace(/([A-Z])/g, ' $1').trim()} value={doc.applicantDocNo} /> : null
+                  ))}
+                </SectionCard>
+              )}
+
+              {/* Pre/Post Disbursement Docs Checklist */}
+              {(f.preSanctionDocs || f.postDisbursementDocs) && (
+                <SectionCard title="Documents Checklist" icon="checklist">
+                  {f.preSanctionDocs && Object.entries(f.preSanctionDocs).map(([key, val]) => (
+                     typeof val === 'boolean' ? <FieldRow key={key} label={`Pre: ${key}`} value={val} /> : null
+                  ))}
+                  {f.postDisbursementDocs && Object.entries(f.postDisbursementDocs).map(([key, val]) => (
+                     typeof val === 'boolean' ? <FieldRow key={key} label={`Post: ${key}`} value={val} /> : null
+                  ))}
+                </SectionCard>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="px-5 py-4 border-t border-outline-variant/20 flex justify-end gap-3 bg-surface-container-low">
+          {(loan.status === 'PENDING' || loan.status === 'QUERIED') && (
+            <>
+              <button
+                onClick={() => { onQuery(loan); onClose(); }}
+                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm"
+              >
+                Send Query
+              </button>
+              <button
+                onClick={() => { onApprove(loan.id); onClose(); }}
+                className="px-6 py-2 bg-accent text-white font-bold rounded-xl hover:bg-opacity-90 transition-all text-sm"
+              >
+                Approve Loan
+              </button>
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="px-6 py-2 border border-outline-variant/30 text-on-surface font-bold rounded-xl hover:bg-surface-container-highest transition-all text-sm"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function LoanApplicationsPage() {
   const [loans, setLoans] = useState<LoanApplication[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
+  const [detailLoan, setDetailLoan] = useState<LoanApplication | null>(null);
 
   // Query Modal
   const [queryModalLoan, setQueryModalLoan] = useState<LoanApplication | null>(null);
@@ -333,31 +687,6 @@ export default function LoanApplicationsPage() {
     }
   };
 
-  const triggerPdfDownload = (url: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const openPdf = (url: string | null) => {
-    if (!url) { toast.error('No PDF recorded for this application'); return; }
-    const fullUrl = url.startsWith('/')
-      ? `${window.location.origin}${url}`
-      : url;
-    triggerPdfDownload(fullUrl);
-    setSelectedPdf(fullUrl);
-  };
-
-  const getFullPdfUrl = (url: string | null) => {
-    if (!url) return null;
-    return url.startsWith('/') ? `${window.location.origin}${url}` : url;
-  };
-
   // After subscription created, optimistically update the row
   const handleAutopaySuccess = (shortUrl: string) => {
     if (!autopayLoan) return;
@@ -436,28 +765,14 @@ export default function LoanApplicationsPage() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-wrap items-center gap-3">
-                        {/* View PDF */}
+                        {/* View Details */}
                         <button
-                          onClick={() => openPdf(app.pdfUrl)}
-                          className={`flex items-center gap-1.5 font-bold text-xs transition-colors group ${app.pdfUrl ? 'text-accent hover:text-accent-dark' : 'text-slate-300 cursor-not-allowed'}`}
+                          onClick={() => setDetailLoan(app)}
+                          className="flex items-center gap-1.5 font-bold text-xs text-accent hover:text-accent-dark transition-colors group"
                         >
-                          <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          <span>PDF</span>
+                          <span className="material-symbols-outlined text-sm group-hover:scale-110 transition-transform" style={{ fontVariationSettings: "'FILL' 1" }}>description</span>
+                          <span>Details</span>
                         </button>
-                        {app.pdfUrl && (
-                          <a
-                            href={getFullPdfUrl(app.pdfUrl) || '#'}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 font-bold text-xs text-slate-600 hover:text-slate-800 transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-sm">download</span>
-                            <span>Download</span>
-                          </a>
-                        )}
 
                         {/* Approve / Query */}
                         {(app.status === 'PENDING' || app.status === 'QUERIED') && (
@@ -653,34 +968,14 @@ export default function LoanApplicationsPage() {
         </div>
       )}
 
-      {/* ── PDF Modal ─────────────────────────────────────────── */}
-      {selectedPdf && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/20 bg-surface-container-low">
-              <h3 className="font-bold text-tertiary">Document Preview</h3>
-              <button
-                onClick={() => setSelectedPdf(null)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high text-tertiary transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 bg-surface-container-highest">
-              <iframe src={`${selectedPdf}#toolbar=0`} className="w-full h-full border-none" title="PDF Preview" />
-            </div>
-            <div className="px-6 py-4 border-t border-outline-variant/20 flex justify-end bg-surface-container-low">
-              <button
-                onClick={() => setSelectedPdf(null)}
-                className="px-6 py-2 bg-tertiary text-white font-bold rounded-xl hover:bg-opacity-90 transition-all"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── Loan Detail Modal ──────────────────────────────────── */}
+      {detailLoan && (
+        <LoanDetailModal 
+          loan={detailLoan} 
+          onClose={() => setDetailLoan(null)}
+          onApprove={handleApprove}
+          onQuery={handleOpenQueryModal}
+        />
       )}
     </div>
   );
