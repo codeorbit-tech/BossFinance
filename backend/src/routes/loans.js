@@ -373,6 +373,68 @@ router.patch('/:id/disburse', authenticate, authorize('ADMIN'), async (req, res)
       }
     }
 
+    // ─── Cashfree Payout Integration ───
+    if (disbursementMethod === 'CASHFREE_PAYOUT') {
+      try {
+        const { requestTransfer } = require('../utils/cashfreePayout');
+        
+        let rawData = {};
+        try {
+          rawData = typeof loan.fullData === 'string' ? JSON.parse(loan.fullData) : (loan.fullData || {});
+          if (typeof rawData === 'string') rawData = JSON.parse(rawData);
+        } catch (e) {
+          console.error('Failed to parse fullData for payout:', e);
+        }
+
+        const bank = rawData.applicantBank || rawData || {};
+        const beneficiaryName = loan.customer.name || 'Customer';
+        const beneficiaryPhone = loan.customer.phone || '9999999999';
+        const beneficiaryEmail = loan.customer.email || 'test@cashfree.com';
+        const bankAccount = bank.accountNo || rawData.accountNo;
+        const ifscCode = bank.ifscCode || rawData.ifscCode;
+
+        if (!bankAccount || !ifscCode) {
+          throw new Error('Bank details (account number or IFSC) missing in application.');
+        }
+
+        const payoutPayload = {
+          beneDetails: {
+            beneId: `bene_${loan.customerId.slice(0, 8)}`,
+            name: beneficiaryName,
+            email: beneficiaryEmail,
+            phone: beneficiaryPhone,
+            bankAccount: bankAccount,
+            ifsc: ifscCode,
+            address1: 'Address',
+          },
+          amount: updatedLoan.amount,
+          transferId: `payout_${loan.id.slice(0, 8)}_${Date.now()}`,
+          transferMode: 'banktransfer',
+        };
+
+        console.log('[CASHFREE PAYOUT] Initiating transfer:', payoutPayload.transferId);
+        const payoutRes = await requestTransfer(payoutPayload);
+        console.log('[CASHFREE PAYOUT] Response:', payoutRes);
+        
+        // Record the payout in audit or as a message
+        await prisma.auditLog.create({
+          data: {
+            customerId: loan.customerId,
+            field: 'disbursement',
+            oldValue: 'PENDING',
+            newValue: `CASHFREE_PAYOUT_SUCCESS: ${payoutPayload.transferId}`,
+            changedById: req.user.id
+          }
+        });
+
+      } catch (payoutErr) {
+        console.error('Cashfree payout error:', payoutErr.message);
+        return res.status(400).json({ 
+          error: `Cashfree Payout Error: ${payoutErr.message}`,
+        });
+      }
+    }
+
     // Update customer status to active
     await prisma.customer.update({
       where: { id: loan.customerId },

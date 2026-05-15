@@ -17,6 +17,7 @@ const analyticsRoutes = require('./routes/analytics');
 const userRoutes = require('./routes/users');
 const auditRoutes = require('./routes/audit');
 const { initPenaltyJob } = require('./jobs/penaltyJob');
+const { initPaymentLinkJob } = require('./jobs/paymentLinkJob');
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -106,6 +107,7 @@ function startServer(port = PORT) {
     console.log(`Boss Finance API running on http://localhost:${port}`);
     await autoSeed();
     initPenaltyJob();
+    initPaymentLinkJob();
   });
 
   server.on('error', (err) => {

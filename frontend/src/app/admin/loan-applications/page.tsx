@@ -977,6 +977,7 @@ export default function LoanApplicationsPage() {
                     { id: 'CASH', label: 'Cash', icon: 'payments' },
                     { id: 'CHEQUE', label: 'Cheque', icon: 'request_quote' },
                     { id: 'CASHFREE_AUTOPAY', label: 'Cashfree Autopay (Auto-setup)', icon: 'autorenew' },
+                    { id: 'CASHFREE_PAYOUT', label: 'Cashfree Payout (Instant Transfer)', icon: 'send' },
                   ].map((method) => (
                     <label
                       key={method.id}
