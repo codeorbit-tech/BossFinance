@@ -22,6 +22,7 @@ interface DashboardStats {
   pending: string;
   customers: number;
   sanctioned: string;
+  recovered: string;
   outstanding: string;
   overdue: number;
   npa: number;
@@ -255,11 +256,10 @@ export default function AdminDashboard() {
                 <div className="h-6 w-1.5 bg-secondary rounded-full"></div>
                 <h3 className="text-lg font-bold text-tertiary uppercase tracking-wider">Portfolio Metrics</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <StatCard label="Target Collections" value={stats.expected} subtitle={`Due in ${activeTab} period`} variant="default" />
-                <StatCard label="Actual Collections" value={stats.actual} subtitle={`Collected in ${activeTab} period`} variant="accent" />
-                <StatCard label="Amount Sanctioned" value={stats.sanctioned} variant="default" />
-                <StatCard label="Outstanding Balance" value={stats.outstanding} variant="default" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <StatCard label="Total Sanctioned Amount" value={stats.sanctioned} subtitle="Principal disbursed across all loans" variant="default" />
+                <StatCard label="Total Recovered (Came Back)" value={stats.recovered} subtitle="Total repayments + interest received" variant="accent" />
+                <StatCard label="Outstanding Balance" value={stats.outstanding} subtitle="Remaining capital to be collected" variant="default" />
               </div>
             </section>
 

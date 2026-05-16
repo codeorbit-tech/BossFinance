@@ -30,7 +30,9 @@ router.get('/dashboard', authenticate, authorize('ADMIN'), async (req, res) => {
       sanctionedRes,
       totalOutstandingRes,
       overdueCount,
-      npaCount
+      npaCount,
+      globalSanctionedRes,
+      globalRecoveredRes
     ] = await Promise.all([
       // Expected (Installments due in period)
       prisma.installment.aggregate({
@@ -65,19 +67,31 @@ router.get('/dashboard', authenticate, authorize('ADMIN'), async (req, res) => {
           status: 'NPA',
           ...(period && { frequency: period.toUpperCase() })
         } 
+      }),
+      // Global Sanctioned Amount
+      prisma.loan.aggregate({
+        _sum: { amount: true }
+      }),
+      // Global Total Recovered (Came Back)
+      prisma.repayment.aggregate({
+        _sum: { amount: true }
       })
     ]);
 
     const expected = expectedRes._sum.expectedAmount || 0;
     const actual = actualRes._sum.amount || 0;
     const outstanding = (totalOutstandingRes._sum.amount || 0) - (totalOutstandingRes._sum.totalPaid || 0);
+    
+    const globalSanctioned = globalSanctionedRes._sum.amount || 0;
+    const globalRecovered = globalRecoveredRes._sum.amount || 0;
 
     res.json({
       expected: `₹${expected.toLocaleString()}`,
       actual: `₹${actual.toLocaleString()}`,
       pending: `₹${(expected - actual > 0 ? expected - actual : 0).toLocaleString()}`,
       customers: customersCount,
-      sanctioned: `₹${(sanctionedRes._sum.amount || 0).toLocaleString()}`,
+      sanctioned: `₹${globalSanctioned.toLocaleString()}`,
+      recovered: `₹${globalRecovered.toLocaleString()}`,
       outstanding: `₹${outstanding.toLocaleString()}`,
       overdue: overdueCount,
       npa: npaCount
