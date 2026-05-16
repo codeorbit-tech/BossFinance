@@ -262,6 +262,16 @@ router.patch('/:id/disburse', authenticate, authorize('ADMIN'), async (req, res)
             paidAt: new Date()
           }
         });
+
+        // ─── Record as System Profit (Investment) ───
+        await prisma.investment.create({
+          data: {
+            type: 'PROFIT',
+            amount: upfrontInterest,
+            description: `Upfront Interest for Loan ${updatedLoan.id} (Customer: ${updatedLoan.customerId})`,
+            date: new Date()
+          }
+        });
       }
     }
 

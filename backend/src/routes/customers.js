@@ -50,7 +50,10 @@ router.get('/:id', authenticate, async (req, res) => {
       include: {
         loans: { 
           include: { 
-            repayments: { orderBy: { paidAt: 'desc' } },
+            repayments: { 
+              where: { paymentType: { notIn: ['UPFRONT_INTEREST', 'PENALTY_SETTLEMENT'] } },
+              orderBy: { paidAt: 'desc' } 
+            },
             installments: { orderBy: { installmentNumber: 'asc' } }
           } 
         },

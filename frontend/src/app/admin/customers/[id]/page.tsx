@@ -21,6 +21,7 @@ interface Repayment {
   paidAt: string;
   status: string;
   method: string;
+  paymentType?: string;
 }
 
 interface Loan {
@@ -244,7 +245,9 @@ export default function CustomerDetailPage() {
                   {activeLoan.repayments.length === 0 ? (
                     <div className="py-8 text-center text-on-surface-variant font-bold">No repayment records found.</div>
                   ) : (
-                    activeLoan.repayments.map((p) => (
+                    activeLoan.repayments
+                    .filter((p: any) => p.method !== 'SYSTEM' && p.paymentType !== 'UPFRONT_INTEREST')
+                    .map((p) => (
                       <div key={p.id} className="py-4 space-y-2">
                         <div className="flex justify-between items-start">
                           <p className="text-xs font-black text-accent">{new Date(p.paidAt).toLocaleDateString()}</p>
@@ -273,7 +276,9 @@ export default function CustomerDetailPage() {
                     {activeLoan.repayments.length === 0 ? (
                       <tr><td colSpan={4} className="py-8 text-center text-on-surface-variant">No repayment records found.</td></tr>
                     ) : (
-                      activeLoan.repayments.map((p) => (
+                      activeLoan.repayments
+                      .filter((p: any) => p.method !== 'SYSTEM' && p.paymentType !== 'UPFRONT_INTEREST')
+                      .map((p) => (
                         <tr key={p.id} className="text-tertiary">
                           <td className="py-3">{new Date(p.paidAt).toLocaleDateString()}</td>
                           <td className="py-3 font-medium text-on-primary-container">₹{p.amount.toLocaleString()}</td>

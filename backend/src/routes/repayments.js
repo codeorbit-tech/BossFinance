@@ -78,7 +78,11 @@ router.get('/stats', authenticate, async (req, res) => {
     ] = await Promise.all([
       prisma.loan.count({ where: { status: 'ACTIVE', ...(req.user.role === 'EMPLOYEE' && { createdById: req.user.id }) } }),
       prisma.repayment.aggregate({
-        where: { paidAt: { gte: today, lt: tomorrow }, status: 'SUCCESS' },
+        where: { 
+          paidAt: { gte: today, lt: tomorrow }, 
+          status: 'SUCCESS',
+          paymentType: { not: 'UPFRONT_INTEREST' }
+        },
         _sum: { amount: true },
       }),
       prisma.loan.count({ where: { status: 'ACTIVE', nextDueDate: { lt: today }, ...(req.user.role === 'EMPLOYEE' && { createdById: req.user.id }) } }),
@@ -113,7 +117,8 @@ router.get('/recent', authenticate, async (req, res) => {
     const after = req.query.after ? new Date(req.query.after) : new Date(Date.now() - 15000);
     const recent = await prisma.repayment.findMany({
       where: {
-        createdAt: { gt: after }
+        createdAt: { gt: after },
+        paymentType: { not: 'UPFRONT_INTEREST' }
       },
       include: { loan: { include: { customer: { select: { name: true } } } } },
       orderBy: { createdAt: 'asc' }
@@ -167,7 +172,11 @@ router.get('/', authenticate, async (req, res) => {
         orderBy: { nextDueDate: 'asc' },
         include: {
           customer: { select: { customerId: true, name: true } },
-          repayments: { orderBy: { paidAt: 'desc' }, take: 1 },
+          repayments: { 
+            where: { paymentType: { not: 'UPFRONT_INTEREST' } },
+            orderBy: { paidAt: 'desc' }, 
+            take: 1 
+          },
         },
       }),
       prisma.loan.count({ where }),
@@ -177,7 +186,10 @@ router.get('/', authenticate, async (req, res) => {
     const repaymentData = await Promise.all(
       loans.map(async (loan) => {
         const totalPaidRes = await prisma.repayment.aggregate({
-          where: { loanId: loan.id, paymentType: { not: 'PENALTY_SETTLEMENT' } },
+          where: { 
+            loanId: loan.id, 
+            paymentType: { notIn: ['PENALTY_SETTLEMENT', 'UPFRONT_INTEREST'] } 
+          },
           _sum: { amount: true },
         });
 
@@ -347,12 +359,15 @@ router.post('/', authenticate, async (req, res) => {
       loanStatusUpdate.status = totalPenaltyDue > 0 ? 'CLOSURE_PENDING' : 'CLOSED';
     }
 
+    // Only increment customer-paid capital and decrement balance if it's NOT upfront interest
+    const isUpfront = (paymentType || 'EMI') === 'UPFRONT_INTEREST';
+    
     await prisma.loan.update({
       where: { id: loanId },
       data: { 
         nextDueDate: nextInst ? nextInst.dueDate : null,
-        totalPaid: { increment: parseFloat(amount) },
-        currentBalance: { decrement: parseFloat(amount) },
+        totalPaid: isUpfront ? undefined : { increment: parseFloat(amount) },
+        currentBalance: isUpfront ? undefined : { decrement: parseFloat(amount) },
         ...loanStatusUpdate
       },
     });
@@ -641,7 +656,13 @@ router.get('/overdue-details', authenticate, async (req, res) => {
       where: loanWhere,
       include: {
         customer: { select: { customerId: true, name: true, phone: true } },
-        repayments: { where: { status: 'SUCCESS' }, orderBy: { paidAt: 'desc' } },
+        repayments: { 
+          where: { 
+            status: 'SUCCESS',
+            paymentType: { not: 'UPFRONT_INTEREST' }
+          }, 
+          orderBy: { paidAt: 'desc' } 
+        },
         installments: { orderBy: { installmentNumber: 'asc' } },
       }
     });
@@ -676,7 +697,9 @@ router.get('/overdue-details', authenticate, async (req, res) => {
           penaltyPerDay: penaltyRate,
           penaltyAmount: totalPenalty,
           outstandingAmount: unpaidAmount,
-          totalPaid: loan.repayments.reduce((sum, r) => sum + (r.amount || 0), 0),
+          totalPaid: loan.repayments
+            .filter(r => r.paymentType !== 'UPFRONT_INTEREST')
+            .reduce((sum, r) => sum + (r.amount || 0), 0),
           remainingEmis,
           lastPayment,
           lastPaymentAmount,

@@ -39,7 +39,10 @@ router.get('/dashboard', authenticate, authorize('ADMIN'), async (req, res) => {
       }),
       // Actual (Payments made in period)
       prisma.repayment.aggregate({
-        where: { paidAt: { gte: startDate, lte: now } },
+        where: { 
+          paidAt: { gte: startDate, lte: now },
+          paymentType: { not: 'UPFRONT_INTEREST' }
+        },
         _sum: { amount: true }
       }),
       // New Customers
@@ -271,7 +274,8 @@ router.get('/employee/today-collection', authenticate, async (req, res) => {
         where: { 
           paidAt: { gte: monthStart, lte: monthEnd }, 
           status: 'SUCCESS',
-          loan: { createdById: employeeId }
+          loan: { createdById: employeeId },
+          paymentType: { not: 'UPFRONT_INTEREST' }
         },
         include: { loan: { select: { frequency: true } } }
       })
@@ -348,6 +352,7 @@ router.get('/activity', authenticate, authorize('ADMIN'), async (req, res) => {
     });
 
     const repayments = await prisma.repayment.findMany({
+      where: { paymentType: { not: 'UPFRONT_INTEREST' } },
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: { loan: { include: { customer: { select: { name: true, customerId: true } } } } }
@@ -398,7 +403,10 @@ router.get('/profit-breakdown', authenticate, authorize('ADMIN'), async (req, re
 
     const [repayments, expensesSum, investmentsRes, razorpayIncomeRes] = await Promise.all([
       prisma.repayment.findMany({
-        where: whereRepayment,
+        where: { 
+          ...whereRepayment,
+          paymentType: { not: 'UPFRONT_INTEREST' } 
+        },
         select: {
           interestComponent: true,
           penaltyComponent: true,
@@ -490,7 +498,11 @@ router.get('/today-collection', authenticate, authorize('ADMIN'), async (req, re
         orderBy: { dueDate: 'asc' }
       }),
       prisma.repayment.findMany({
-        where: { paidAt: { gte: monthStart, lte: monthEnd }, status: 'SUCCESS' },
+        where: { 
+          paidAt: { gte: monthStart, lte: monthEnd }, 
+          status: 'SUCCESS',
+          paymentType: { not: 'UPFRONT_INTEREST' }
+        },
         include: { loan: { select: { frequency: true } } }
       })
     ]);

@@ -411,7 +411,7 @@ function CustomerSearch({ onSelect }: { onSelect: (loan: Repayment) => void }) {
       }
 
       const paid = activeLoan.repayments
-        .filter((r: any) => r.paymentType !== 'PENALTY_SETTLEMENT')
+        .filter((r: any) => r.paymentType !== 'PENALTY_SETTLEMENT' && r.paymentType !== 'UPFRONT_INTEREST')
         .reduce((sum: number, r: any) => sum + r.amount, 0);
       const penaltyDue = activeLoan.installments.reduce((sum: number, inst: any) => {
         return sum + Math.max(0, (inst.penalInterest || 0) - (inst.penaltyPaid || 0));
