@@ -404,14 +404,14 @@ router.get('/profit-breakdown', authenticate, authorize('ADMIN'), async (req, re
     const [repayments, expensesSum, investmentsRes, razorpayIncomeRes] = await Promise.all([
       prisma.repayment.findMany({
         where: { 
-          ...whereRepayment,
-          paymentType: { not: 'UPFRONT_INTEREST' } 
+          ...whereRepayment
         },
         select: {
           interestComponent: true,
           penaltyComponent: true,
           principalComponent: true,
-          amount: true
+          amount: true,
+          paymentType: true
         }
       }),
       prisma.expense.aggregate({
@@ -429,20 +429,24 @@ router.get('/profit-breakdown', authenticate, authorize('ADMIN'), async (req, re
     ]);
 
     const stats = repayments.reduce((acc, r) => {
-      acc.interest += r.interestComponent || 0;
-      acc.penalty += r.penaltyComponent || 0;
-      acc.principal += r.principalComponent || 0;
+      if (r.paymentType === 'UPFRONT_INTEREST') {
+        acc.upfrontInterest += r.amount;
+      } else {
+        acc.interest += r.interestComponent || 0;
+        acc.penalty += r.penaltyComponent || 0;
+        acc.principal += r.principalComponent || 0;
+      }
       acc.totalCollected += r.amount;
       return acc;
-    }, { interest: 0, penalty: 0, principal: 0, totalCollected: 0 });
+    }, { interest: 0, penalty: 0, principal: 0, upfrontInterest: 0, totalCollected: 0 });
 
     const manualExpenses = expensesSum._sum.amount || 0;
     const razorpayFees = (razorpayIncomeRes._sum.amount || 0) * 0.01;
     const totalExpenses = manualExpenses + razorpayFees;
     const investmentProfit = investmentsRes._sum.amount || 0;
     
-    // Profit = (Interest + Penalty + InvestmentProfit) - TotalExpenses
-    const netProfit = (stats.interest + stats.penalty + investmentProfit) - totalExpenses;
+    // Profit = (Interest + Penalty + UpfrontInterest + InvestmentProfit) - TotalExpenses
+    const netProfit = (stats.interest + stats.penalty + stats.upfrontInterest + investmentProfit) - totalExpenses;
 
     res.json({
       interest: stats.interest,
@@ -455,7 +459,8 @@ router.get('/profit-breakdown', authenticate, authorize('ADMIN'), async (req, re
       razorpayFees,
       netProfit,
       breakdown: [
-        { label: 'Interest Income', value: stats.interest, color: 'text-accent', icon: 'trending_up' },
+        { label: 'EMI Interest', value: stats.interest, color: 'text-accent', icon: 'trending_up' },
+        { label: 'Upfront Interest', value: stats.upfrontInterest, color: 'text-emerald-500', icon: 'payments' },
         { label: 'Penalty Income', value: stats.penalty, color: 'text-amber-600', icon: 'warning' },
         { label: 'Investment Profit', value: investmentProfit, color: 'text-blue-500', icon: 'currency_rupee' },
         { label: 'Collection (Principal)', value: stats.principal, color: 'text-on-surface-variant', icon: 'account_balance_wallet' },
