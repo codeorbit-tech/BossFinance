@@ -75,6 +75,7 @@ router.get('/dashboard', authenticate, authorize('ADMIN'), async (req, res) => {
       }),
       // Global Total Recovered (Came Back)
       prisma.repayment.aggregate({
+        where: { paymentType: { not: 'UPFRONT_INTEREST' } },
         _sum: { amount: true }
       })
     ]);
