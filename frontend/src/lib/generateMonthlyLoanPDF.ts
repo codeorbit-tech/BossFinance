@@ -321,64 +321,85 @@ function drawSection5(doc: Doc, y: number, data: SimpleLoanFormData): number {
 async function drawSection6Photos(doc: Doc, photos: SimplePhotoUploads): Promise<void> {
   doc.addPage();
   let y = 20;
-  y = sectionTitle(doc, y, 'Section 6 — Identity & Property Photos');
-
-  const photoItems: { label: string; file: File | null }[] = [
-    { label: 'APPLICANT PHOTO', file: photos.applicantPhoto },
-    { label: 'CO-APPLICANT PHOTO', file: photos.coApplicantPhoto },
-    { label: 'SHOP / BUSINESS PHOTO', file: photos.shopPhoto },
-    { label: 'AADHAAR FRONT (APPLICANT)', file: photos.aadhaarFront },
-    { label: 'AADHAAR BACK (APPLICANT)', file: photos.aadhaarBack },
-    { label: 'PAN CARD (APPLICANT)', file: photos.panCard },
-    { label: 'GUARANTOR PHOTO', file: photos.guarantorPhoto },
-    { label: 'GUARANTOR AADHAAR FRONT', file: photos.guarantorAadhaarFront },
-    { label: 'GUARANTOR AADHAAR BACK', file: photos.guarantorAadhaarBack },
-  ];
+  y = sectionTitle(doc, y, 'Section 6 — Property Inspection Gallery');
 
   const imgW = (CW - 10) / 2;
-  const imgH = imgW * 0.75;
-  let col = 0;
-  let rowY = y + 5;
+  const imgH = imgW * 0.6; // landscape ratio for house photos
 
-  for (const item of photoItems) {
-    const x = col === 0 ? ML : ML + imgW + 10;
-
-    if (rowY + imgH + 14 > PH - 18) {
-      doc.addPage();
-      rowY = 20;
-      col = 0;
-    }
-
+  const drawSlot = async (label: string, file: File | null, x: number, yPos: number): Promise<void> => {
     doc.setDrawColor(200);
-    doc.rect(x, rowY, imgW, imgH);
-
-    if (item.file) {
+    doc.rect(x, yPos, imgW, imgH);
+    if (file) {
       try {
-        const photo = await loadPhoto(item.file);
-        doc.addImage(photo.data, 'JPEG', x + 1, rowY + 1, imgW - 2, imgH - 2);
+        const photo = await loadPhoto(file);
+        doc.addImage(photo.data, 'JPEG', x + 1, yPos + 1, imgW - 2, imgH - 2);
       } catch (e) {
         doc.setFontSize(8);
-        doc.text('IMAGE LOAD ERROR', x + imgW / 2, rowY + imgH / 2, { align: 'center' });
+        doc.text('IMAGE LOAD ERROR', x + imgW / 2, yPos + imgH / 2, { align: 'center' });
       }
     } else {
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text('NOT UPLOADED', x + imgW / 2, rowY + imgH / 2, { align: 'center' });
+      doc.text('NOT UPLOADED', x + imgW / 2, yPos + imgH / 2, { align: 'center' });
       doc.setTextColor(0);
     }
-
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.text(item.label, x + imgW / 2, rowY + imgH + 6, { align: 'center' });
+    doc.text(label, x + imgW / 2, yPos + imgH + 6, { align: 'center' });
+  };
 
-    if (col === 0) {
-      col = 1;
-    } else {
-      col = 0;
-      rowY += imgH + 14;
+  // Row 1: Front & Back
+  const row1Y = y + 5;
+  await drawSlot('HOUSE FRONT VIEW', photos.houseFrontView, ML, row1Y);
+  await drawSlot('HOUSE BACK VIEW', photos.houseBackView, ML + imgW + 10, row1Y);
+
+  // Row 2: Left & Right
+  const row2Y = row1Y + imgH + 14;
+  await drawSlot('HOUSE LEFT SIDE VIEW', photos.houseLeftView, ML, row2Y);
+  await drawSlot('HOUSE RIGHT SIDE VIEW', photos.houseRightView, ML + imgW + 10, row2Y);
+
+  // Identity Documents on new page
+  const idItems: { label: string; file: File | null }[] = [
+    { label: 'SHOP / BUSINESS PHOTO', file: photos.shopPhoto },
+    { label: 'AADHAAR FRONT (APPLICANT)', file: photos.aadhaarFront },
+    { label: 'AADHAAR BACK (APPLICANT)', file: photos.aadhaarBack },
+    { label: 'PAN CARD (APPLICANT)', file: photos.panCard },
+    { label: 'GUARANTOR AADHAAR FRONT', file: photos.guarantorAadhaarFront },
+    { label: 'GUARANTOR AADHAAR BACK', file: photos.guarantorAadhaarBack },
+  ].filter(i => i.file);
+
+  if (idItems.length > 0) {
+    doc.addPage();
+    let idY = 20;
+    idY = sectionTitle(doc, idY, 'Section 6B — Identity Documents');
+    const idImgW = (CW - 10) / 2;
+    const idImgH = idImgW * 0.75;
+    let col = 0;
+    let rowY = idY + 5;
+
+    for (const item of idItems) {
+      const x = col === 0 ? ML : ML + idImgW + 10;
+      if (rowY + idImgH + 14 > PH - 18) {
+        doc.addPage();
+        rowY = 20;
+        col = 0;
+      }
+      doc.setDrawColor(200);
+      doc.rect(x, rowY, idImgW, idImgH);
+      if (item.file) {
+        try {
+          const photo = await loadPhoto(item.file);
+          doc.addImage(photo.data, 'JPEG', x + 1, rowY + 1, idImgW - 2, idImgH - 2);
+        } catch (e) {}
+      }
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(item.label, x + idImgW / 2, rowY + idImgH + 6, { align: 'center' });
+      if (col === 0) { col = 1; } else { col = 0; rowY += idImgH + 14; }
     }
   }
 }
+
 
 // ─── ANNEXURES: Sanction & Repayment Schedule (adapted for Simple Loan) ───
 function drawAnnexures(doc: Doc, data: SimpleLoanFormData): void {
@@ -590,6 +611,7 @@ export async function generateMonthlyLoanPDF(
   y = drawSection3(doc, y, data);
   y = drawSection4(doc, y, data);
   y = drawSection5(doc, y, data);
+  await drawSection6Photos(doc, photos);
   drawAnnexures(doc, data);
   drawTermsAndConditions(doc, data);
   drawDeclaration(doc, data);

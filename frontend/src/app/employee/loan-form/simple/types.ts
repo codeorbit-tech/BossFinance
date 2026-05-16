@@ -60,6 +60,10 @@ export interface SimpleLoanFormData {
 export interface SimplePhotoUploads {
   applicantPhoto: File | null;
   coApplicantPhoto: File | null;
+  houseFrontView: File | null;
+  houseLeftView: File | null;
+  houseRightView: File | null;
+  houseBackView: File | null;
   shopPhoto: File | null;
   aadhaarFront: File | null;
   aadhaarBack: File | null;
@@ -119,6 +123,10 @@ export const emptySimpleLoanData = (): SimpleLoanFormData => ({
 export const emptySimplePhotos = (): SimplePhotoUploads => ({
   applicantPhoto: null,
   coApplicantPhoto: null,
+  houseFrontView: null,
+  houseLeftView: null,
+  houseRightView: null,
+  houseBackView: null,
   shopPhoto: null,
   aadhaarFront: null,
   aadhaarBack: null,

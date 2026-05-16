@@ -59,10 +59,12 @@ function NumberInput({ label, value, onChange, required }: {
   );
 }
 
-function PartyResidenceCard({
-  label, color, party, onChange
+function ResidenceCard({
+  party, label, color, onChange
 }: {
-  label: string; color: string; party: PartyResidenceInfo;
+  party: PartyResidenceInfo;
+  label: string;
+  color: string;
   onChange: (updates: Partial<PartyResidenceInfo>) => void;
 }) {
   return (
@@ -129,31 +131,31 @@ function PartyResidenceCard({
   );
 }
 
-export default function Section5ResidenceInfo({ formData, updateFormData }: Props) {
+export default function Section5ResidenceInfo({ formData, updateFormData, errors }: Props) {
   return (
     <div>
       <p className="text-xs text-on-surface-variant mb-6 bg-surface-container rounded-xl px-4 py-3 border border-outline-variant/20">
-        <span className="font-bold text-on-surface">Note:</span> Fill in residence and personal information for all three parties.
+        <span className="font-bold text-on-surface">Note:</span> Fill in residence and personal information for all parties.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <PartyResidenceCard
-          label="Applicant"
-          color="bg-primary"
+        <ResidenceCard
           party={formData.applicantResidence}
-          onChange={updates => updateFormData({ applicantResidence: { ...formData.applicantResidence, ...updates } })}
+          label="Applicant Residence"
+          color="bg-accent"
+          onChange={u => updateFormData({ applicantResidence: { ...formData.applicantResidence, ...u } })}
         />
-        <PartyResidenceCard
-          label="Co-Applicant"
-          color="bg-secondary"
+        <ResidenceCard
           party={formData.coApplicantResidence}
-          onChange={updates => updateFormData({ coApplicantResidence: { ...formData.coApplicantResidence, ...updates } })}
-        />
-        <PartyResidenceCard
-          label="Guarantor"
+          label="Co-Applicant Residence"
           color="bg-tertiary"
+          onChange={u => updateFormData({ coApplicantResidence: { ...formData.coApplicantResidence, ...u } })}
+        />
+        <ResidenceCard
           party={formData.guarantorResidence}
-          onChange={updates => updateFormData({ guarantorResidence: { ...formData.guarantorResidence, ...updates } })}
+          label="Guarantor Residence"
+          color="bg-error"
+          onChange={u => updateFormData({ guarantorResidence: { ...formData.guarantorResidence, ...u } })}
         />
       </div>
     </div>

@@ -401,16 +401,18 @@ function drawSection6(doc: Doc, y: number, data: VehicleLoanFormData): number {
 // ─── SECTION 7: Bank Details ───
 function drawSection7(doc: Doc, y: number, data: VehicleLoanFormData): number {
   y = sectionTitle(doc, y, 'Section 7 — Bank Account Details');
-  const drawBank = (label: string, bank: typeof data.applicantBank): number => {
-    y = subHeader(doc, y, label);
-    y = row(doc, y, 'Bank & Branch', `${val(bank.bankName)} (${val(bank.branch)})`);
-    y = row(doc, y, 'Account Info', `${val(bank.accountNo)} [${val(bank.accountType)}]`);
-    y = row(doc, y, 'IFSC Code', val(bank.ifscCode));
-    y = row(doc, y, 'Avg Business/Month', `Debit: ${currency(bank.avgDebitPerMonth)} | Credit: ${currency(bank.avgCreditPerMonth)}`);
-    return y + 2;
+
+  const drawBank = (yIn: number, label: string, bank: typeof data.applicantBank): number => {
+    let yy = subHeader(doc, yIn, label);
+    yy = row(doc, yy, 'Bank & Branch', `${val(bank.bankName)} (${val(bank.branch)})`);
+    yy = row(doc, yy, 'Account Info', `${val(bank.accountNo)} [${val(bank.accountType)}]`);
+    yy = row(doc, yy, 'IFSC Code', val(bank.ifscCode));
+    yy = row(doc, yy, 'Avg Business/Month', `Debit: ${currency(bank.avgDebitPerMonth)} | Credit: ${currency(bank.avgCreditPerMonth)}`);
+    return yy + 2;
   };
-  y = drawBank('Applicant Banking', data.applicantBank);
-  y = drawBank('Co-Applicant Banking', data.coApplicantBank);
+
+  y = drawBank(y, 'Applicant Banking', data.applicantBank);
+  y = drawBank(y, 'Co-Applicant Banking', data.coApplicantBank);
   return y + 4;
 }
 
@@ -436,79 +438,45 @@ function drawSection9(doc: Doc, y: number, data: VehicleLoanFormData): number {
   const imm = data.immovableProperties.filter(p => p.assetType);
   if (imm.length > 0) {
     y = subHeader(doc, y, 'Immovable Properties');
-    imm.forEach((p, i) => {
+    for (let i = 0; i < imm.length; i++) {
+      const p = imm[i];
       y = row(doc, y, `Property #${i+1} Type`, val(p.assetType === 'Others' ? p.assetTypeOther : p.assetType));
       y = row(doc, y, `Property #${i+1} Valuation`, currency(p.declaredValue));
-    });
+    }
   }
   return y + 4;
 }
 
-// ─── SECTION 10: Photos Gallery (Personal + Vehicle) ───
-async function drawSection10Photos(doc: jsPDF, photos: PhotoUploads): Promise<void> {
-  // Page 1: Personal Portraits
+// ─── SECTION 10: Property Inspection Gallery (4 sides) ───
+async function drawSection10HouseGallery(doc: jsPDF, photos: PhotoUploads): Promise<void> {
   doc.addPage();
   let y = 20;
-  y = sectionTitle(doc, y, 'Section 10 — Portrait Gallery');
-  
-  const portraitW = 50;
-  const portraitH = 65;
-  const portraitSpacing = (CW - (3 * portraitW)) / 2;
+  y = sectionTitle(doc, y, 'Section 10 — Property Inspection Gallery');
 
-  const portraits = [
-    { label: 'APPLICANT', file: photos.applicantPhoto },
-    { label: 'CO-APPLICANT', file: photos.coApplicantPhoto },
-    { label: 'GUARANTOR', file: photos.guarantorPhoto },
-  ];
+  const imgW = (CW - 10) / 2;
+  const imgH = imgW * 0.6; // landscape ratio
 
-  for (let i = 0; i < portraits.length; i++) {
-    const { label, file } = portraits[i];
-    const x = ML + i * (portraitW + portraitSpacing);
+  const drawSlot = async (label: string, file: File | null, x: number, yPos: number): Promise<void> => {
     doc.setDrawColor(200);
-    doc.rect(x, y, portraitW, portraitH);
+    doc.rect(x, yPos, imgW, imgH);
     if (file) {
       try {
         const photo = await loadPhoto(file);
-        doc.addImage(photo.data, 'JPEG', x + 1, y + 1, portraitW - 2, portraitH - 2);
-      } catch (e) { console.error(e); }
-    } else {
-      doc.setFontSize(8);
-      doc.text('NO PHOTO', x + portraitW/2, y + portraitH/2, { align: 'center' });
+        doc.addImage(photo.data, 'JPEG', x + 1, yPos + 1, imgW - 2, imgH - 2);
+      } catch (e) {}
     }
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text(label, x + portraitW/2, y + portraitH + 5, { align: 'center' });
-  }
-
-  // Page 2: Vehicle Inspection Views
-  doc.addPage();
-  y = 20;
-  y = sectionTitle(doc, y, 'Section 10 — Vehicle Inspection Gallery');
-  
-  const drawInspectionPair = async (labelLeft: string, fileLeft: File | null, labelRight: string, fileRight: File | null, yPos: number): Promise<number> => {
-    const imgW = (CW - 10) / 2;
-    const imgH = imgW * 0.75;
-    
-    const drawSingle = async (label: string, file: File | null, x: number) => {
-      doc.setDrawColor(200);
-      doc.rect(x, yPos, imgW, imgH);
-      if (file) {
-        try {
-          const photo = await loadPhoto(file);
-          doc.addImage(photo.data, 'JPEG', x + 1, yPos + 1, imgW - 2, imgH - 2);
-        } catch (e) {}
-      }
-      doc.setFontSize(8);
-      doc.text(label, x + imgW/2, yPos + imgH + 5, { align: 'center' });
-    };
-
-    await drawSingle(labelLeft, fileLeft, ML);
-    await drawSingle(labelRight, fileRight, ML + imgW + 10);
-    return yPos + imgH + 12;
+    doc.text(label, x + imgW / 2, yPos + imgH + 5, { align: 'center' });
   };
 
-  y = await drawInspectionPair('FRONT VIEW', photos.frontView, 'BACK VIEW', photos.backView, y + 5);
-  y = await drawInspectionPair('LEFT SIDE VIEW', photos.leftSideView, 'RIGHT SIDE VIEW', photos.rightSideView, y + 5);
+  const row1Y = y + 5;
+  await drawSlot('HOUSE FRONT VIEW', photos.houseFrontView, ML, row1Y);
+  await drawSlot('HOUSE BACK VIEW', photos.houseBackView, ML + imgW + 10, row1Y);
+
+  const row2Y = row1Y + imgH + 14;
+  await drawSlot('HOUSE LEFT SIDE VIEW', photos.houseLeftView, ML, row2Y);
+  await drawSlot('HOUSE RIGHT SIDE VIEW', photos.houseRightView, ML + imgW + 10, row2Y);
 }
 
 // ─── SECTION 11: Document Checklist ───
@@ -526,11 +494,12 @@ async function drawSection11(doc: Doc, y: number, data: VehicleLoanFormData): Pr
     drivingLicence: 'Driving Licence',
   };
 
-  Object.entries(data.kycDocuments).slice(0, 4).forEach(([key, entry]: [string, KycDocEntry]) => {
+  const kycEntries = Object.entries(data.kycDocuments).slice(0, 4) as [string, KycDocEntry][];
+  for (const [key, entry] of kycEntries) {
     const label = KYC_LABELS[key] ?? key;
     const aVal = entry.applicantChecked ? `Verified (${entry.applicantDocNo})` : 'Pending';
     y = row(doc, y, label, aVal);
-  });
+  }
 
   return y + 10;
 }
@@ -582,7 +551,7 @@ export async function generateVehicleLoanPDF(
   y = drawSection8(doc, y, formData);
   y = drawSection9(doc, y, formData);
   
-  await drawSection10Photos(doc, photos);
+  await drawSection10HouseGallery(doc, photos);
   await drawSection11(doc, 30, formData);
   drawFinanceAnnexures(doc, formData, 'VEHICLE');
   drawDeclaration(doc, formData);

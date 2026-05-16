@@ -117,10 +117,10 @@ const initialPhotos = (): PhotoUploads => ({
   applicantPhoto: null,
   coApplicantPhoto: null,
   guarantorPhoto: null,
-  frontView: null,
-  leftSideView: null,
-  rightSideView: null,
-  backView: null,
+  houseFrontView: null,
+  houseLeftView: null,
+  houseRightView: null,
+  houseBackView: null,
   others: [null, null, null, null, null],
 });
 
@@ -145,6 +145,9 @@ function validateSection(section: number, data: VehicleLoanFormData, photos: Pho
     if (!data.applicantPersonal.gender) errors.push('Applicant Gender is required.');
     if (!data.applicantPersonal.dob) errors.push('Applicant DOB is required.');
   }
+  if (section === 6) {
+    // Residence info - no photo validation here, photos collected in section 10
+  }
   if (section === 7) {
     if (!data.applicantBank.bankName) errors.push('Applicant Bank Name is required.');
     if (!data.applicantBank.accountNo) errors.push('Applicant Account No. is required.');
@@ -154,8 +157,10 @@ function validateSection(section: number, data: VehicleLoanFormData, photos: Pho
   }
   if (section === 10) {
     if (!photos.applicantPhoto) errors.push('Applicant Portrait Photo is mandatory.');
-    if (!photos.frontView) errors.push('Vehicle Front View is mandatory.');
-    if (!photos.backView) errors.push('Vehicle Back View is mandatory.');
+    if (!photos.houseFrontView) errors.push('House Front View photo is mandatory.');
+    if (!photos.houseBackView) errors.push('House Back View photo is mandatory.');
+    if (!photos.houseLeftView) errors.push('House Left Side View photo is mandatory.');
+    if (!photos.houseRightView) errors.push('House Right Side View photo is mandatory.');
   }
   return errors;
 }
@@ -526,10 +531,10 @@ export default function VehicleLoanForm() {
       applicantPhoto: createDummyFile("applicant.jpg"),
       coApplicantPhoto: createDummyFile("co_applicant.jpg"),
       guarantorPhoto: createDummyFile("guarantor.jpg"),
-      frontView: createDummyFile("front_view.jpg"),
-      leftSideView: createDummyFile("left_side.jpg"),
-      rightSideView: createDummyFile("right_side.jpg"),
-      backView: createDummyFile("back_view.jpg"),
+      houseFrontView: createDummyFile("house_front.jpg"),
+      houseLeftView: createDummyFile("house_left.jpg"),
+      houseRightView: createDummyFile("house_right.jpg"),
+      houseBackView: createDummyFile("house_back.jpg"),
       others: [null, null, null, null, null],
     });
 

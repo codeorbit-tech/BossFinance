@@ -158,8 +158,8 @@ export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmi
           </div>
         </SectionReviewCard>
 
-        {/* Section 10: Vehicle Photos */}
-        <SectionReviewCard sectionNo={10} title="Vehicle Photos & ID" icon="photo_camera" onEdit={() => onEdit(10)}>
+        {/* Section 10: Property Photos */}
+        <SectionReviewCard sectionNo={10} title="Property & ID Photos" icon="photo_camera" onEdit={() => onEdit(10)}>
           <div className="space-y-6">
             <div>
               <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3">Party Identification</p>
@@ -187,13 +187,13 @@ export default function ReviewScreen({ formData, photos, onEdit, onBack, onSubmi
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3">Inspection Views</p>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3">Property Inspection (4 Sides)</p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { label: 'Front', file: photos.frontView },
-                  { label: 'Back', file: photos.backView },
-                  { label: 'Left', file: photos.leftSideView },
-                  { label: 'Right', file: photos.rightSideView },
+                  { label: 'Front', file: photos.houseFrontView },
+                  { label: 'Back', file: photos.houseBackView },
+                  { label: 'Left', file: photos.houseLeftView },
+                  { label: 'Right', file: photos.houseRightView },
                   ...photos.others.filter(Boolean).map((f, i) => ({ label: `Extra ${i + 1}`, file: f })),
                 ].map(({ label, file }) => (
                   <div key={label} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wide ${file ? 'border-accent/40 bg-accent/10 text-accent' : 'border-error/20 bg-error/5 text-error'}`}>

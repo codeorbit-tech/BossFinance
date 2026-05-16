@@ -206,10 +206,10 @@ export interface PhotoUploads {
   applicantPhoto: File | null;
   coApplicantPhoto: File | null;
   guarantorPhoto: File | null;
-  frontView: File | null;
-  leftSideView: File | null;
-  rightSideView: File | null;
-  backView: File | null;
+  houseFrontView: File | null;
+  houseLeftView: File | null;
+  houseRightView: File | null;
+  houseBackView: File | null;
   others: (File | null)[];
 }
 

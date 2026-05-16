@@ -67,6 +67,11 @@ export default function SimpleLoanForm() {
     if (currentSection === 3) {
       if (!photos.applicantPhoto) errs.push('Applicant Photo is required.');
       if (!photos.aadhaarFront) errs.push('Aadhaar Front is required.');
+      
+      if (!photos.houseFrontView) errs.push('House Front View photo is required.');
+      if (!photos.houseBackView) errs.push('House Back View photo is required.');
+      if (!photos.houseLeftView) errs.push('House Left Side View photo is required.');
+      if (!photos.houseRightView) errs.push('House Right Side View photo is required.');
     }
     return errs;
   };
@@ -244,6 +249,10 @@ export default function SimpleLoanForm() {
     setPhotos({
       applicantPhoto: createDummyFile('applicant.jpg'),
       coApplicantPhoto: createDummyFile('co_applicant.jpg'),
+      houseFrontView: createDummyFile('house_front.jpg'),
+      houseBackView: createDummyFile('house_back.jpg'),
+      houseLeftView: createDummyFile('house_left.jpg'),
+      houseRightView: createDummyFile('house_right.jpg'),
       shopPhoto: createDummyFile('shop.jpg'),
       aadhaarFront: createDummyFile('aadhaar_front.jpg'),
       aadhaarBack: createDummyFile('aadhaar_back.jpg'),

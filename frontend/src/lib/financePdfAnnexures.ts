@@ -181,7 +181,9 @@ function drawRepaymentSchedule(doc: jsPDF, y: number, data: any): number {
 function drawSignatureGrid(doc: jsPDF, y: number): number {
   y = checkPage(doc, y, 40);
   const colW = CW / 3;
-  ['Prepared By', 'Verified By', 'Approved By'].forEach((label, idx) => {
+  const sigLabels = ['Prepared By', 'Verified By', 'Approved By'];
+  for (let idx = 0; idx < sigLabels.length; idx++) {
+    const label = sigLabels[idx];
     const x = ML + idx * colW;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
@@ -190,7 +192,7 @@ function drawSignatureGrid(doc: jsPDF, y: number): number {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
     doc.text('Signature / Name / Date', x + colW / 2, y + 23, { align: 'center' });
-  });
+  }
   return y + 32;
 }
 
@@ -227,14 +229,15 @@ export function drawFinanceAnnexures(doc: jsPDF, data: any, kind: LoanKind): voi
 
   y = section(doc, y, 'Charges and Penalty Rules');
   y = tableHeader(doc, y, ['Particulars', 'Current Rule / Value', 'Remarks'], [55, 55, 70]);
-  [
+  const chargeRows = [
     ['EMI Collection', 'Regular EMI only', 'Penalty is not collected with monthly EMI.'],
     ['Late Payment Penalty', 'As configured in system settings', 'Daily penalty accrues after EMI due date until that EMI is paid.'],
     ['Penalty Settlement', 'At loan closure', 'Admin may discount/waive penalty during final document completion.'],
     ['Pre-Closure', 'As approved by Admin', 'Subject to outstanding principal, interest, charges, and applicable approvals.'],
     ['Document Charges', 'To be filled by Admin', 'If applicable.'],
     ['Legal / Valuation Charges', 'To be filled by Admin', kind === 'HOME' ? 'Applicable for property verification where required.' : 'Applicable for asset verification where required.'],
-  ].forEach((r) => { y = tableRow(doc, y, r, [55, 55, 70]); });
+  ];
+  for (const r of chargeRows) { y = tableRow(doc, y, r, [55, 55, 70]); }
 
   y = box(doc, y + 4, 'Penalty accounting: generated penalty, discounted penalty, and collected penalty must be recorded separately. Only actually collected penalty is treated as penalty income / net profit.');
 

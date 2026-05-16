@@ -81,6 +81,12 @@ export default function Section3Documents({ photos, setPhotos }: Props) {
 
   return (
     <div className="space-y-8">
+      <div className="bg-surface-container rounded-xl p-4 border border-outline-variant/20 mb-4">
+        <p className="text-xs text-on-surface-variant font-bold">
+          Note: Upload <span className="text-error">4 sides</span> of the applicant's property (Front, Back, Left, Right views). All 4 photos are mandatory.
+        </p>
+      </div>
+
       {/* Applicant Documents */}
       <div>
         <div className="flex items-center gap-3 mb-4">
@@ -128,6 +134,25 @@ export default function Section3Documents({ photos, setPhotos }: Props) {
           <PhotoCard field="guarantorPhoto" label="Guarantor Photo" icon="account_circle" photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
           <PhotoCard field="guarantorAadhaarFront" label="Guarantor Aadhaar Front" icon="badge" photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
           <PhotoCard field="guarantorAadhaarBack" label="Guarantor Aadhaar Back" icon="badge" photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
+        </div>
+      </div>
+
+      <div className="h-px bg-outline-variant/10 w-full" />
+
+      {/* Property Evidence — 4 Sides */}
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-accent text-sm">home</span>
+          </div>
+          <h4 className="text-sm font-black text-on-surface uppercase tracking-wider">Property Evidence — 4 Sides</h4>
+          <span className="text-error text-[10px] font-black">* Mandatory</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <PhotoCard field="houseFrontView" label="House Front View" icon="home" required photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
+          <PhotoCard field="houseBackView" label="House Back View" icon="home" required photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
+          <PhotoCard field="houseLeftView" label="House Left Side" icon="home" required photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
+          <PhotoCard field="houseRightView" label="House Right Side" icon="home" required photos={photos} setPhotos={setPhotos} setFileInputRef={setFileInputRef} handleFileChange={handleFileChange} />
         </div>
       </div>
     </div>

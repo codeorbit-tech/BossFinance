@@ -185,19 +185,19 @@ export default function Section9VehiclePhotos({ photos, setPhotos }: Props) {
 
       <div className="h-px bg-outline-variant/10" />
 
-      {/* 2. Vehicle Photos */}
+      {/* 2. House Photos */}
       <div>
         <h4 className="text-sm font-black text-on-surface mb-6 flex items-center gap-3 uppercase tracking-widest">
           <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-accent text-lg">directions_car</span>
+            <span className="material-symbols-outlined text-accent text-lg">home</span>
           </div>
-          Vehicle Inspection Gallery
+          Property Inspection Gallery
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-           <PhotoSlot label="Front View" icon="directions_car" mandatory={true} file={photos.frontView} onChange={f => updatePhoto('frontView', f)} />
-           <PhotoSlot label="Back View" icon="directions_car" mandatory={true} file={photos.backView} onChange={f => updatePhoto('backView', f)} />
-           <PhotoSlot label="Left Side View" icon="arrow_back" mandatory={true} file={photos.leftSideView} onChange={f => updatePhoto('leftSideView', f)} />
-           <PhotoSlot label="Right Side View" icon="arrow_forward" mandatory={true} file={photos.rightSideView} onChange={f => updatePhoto('rightSideView', f)} />
+           <PhotoSlot label="House Front View" icon="home" mandatory={true} file={photos.houseFrontView} onChange={f => updatePhoto('houseFrontView', f)} />
+           <PhotoSlot label="House Back View" icon="home" mandatory={true} file={photos.houseBackView} onChange={f => updatePhoto('houseBackView', f)} />
+           <PhotoSlot label="House Left Side View" icon="home" mandatory={true} file={photos.houseLeftView} onChange={f => updatePhoto('houseLeftView', f)} />
+           <PhotoSlot label="House Right Side View" icon="home" mandatory={true} file={photos.houseRightView} onChange={f => updatePhoto('houseRightView', f)} />
         </div>
 
         <div className="space-y-4">
@@ -226,7 +226,7 @@ export default function Section9VehiclePhotos({ photos, setPhotos }: Props) {
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-2">
            {[
              'Passport photos must be 3:4 aspect ratio with clear face visibility.',
-             'Vehicle photos must show the full structure without obstructions.',
+             'Property photos must show the full structure without obstructions.',
              'Maximum file size is 5MB. Highly recommended to use original quality.',
              'Only JPG and PNG formats are supported for PDF generation.'
            ].map((g, i) => (

@@ -20,10 +20,10 @@ const DEMO_PHOTOS: PhotoUploads = {
   applicantPhoto: makeDemoPhoto('applicant_photo.png'),
   coApplicantPhoto: makeDemoPhoto('co_applicant_photo.png'),
   guarantorPhoto: makeDemoPhoto('guarantor_photo.png'),
-  frontView: makeDemoPhoto('front_view.png'),
-  leftSideView: makeDemoPhoto('left_side.png'),
-  rightSideView: makeDemoPhoto('right_side.png'),
-  backView: makeDemoPhoto('back_view.png'),
+  houseFrontView: makeDemoPhoto('house_front.png'),
+  houseLeftView: makeDemoPhoto('house_left.png'),
+  houseRightView: makeDemoPhoto('house_right.png'),
+  houseBackView: makeDemoPhoto('house_back.png'),
   others: [null, null, null, null, null],
 };
 
@@ -35,7 +35,15 @@ export default function SamplePDFPage() {
     setStatus('generating');
     try {
       const { generateVehicleLoanPDF } = await import('@/lib/generateVehicleLoanPDF');
-      await generateVehicleLoanPDF(SAMPLE_FORM_DATA, DEMO_PHOTOS);
+      const { url, fileName } = await generateVehicleLoanPDF(SAMPLE_FORM_DATA, DEMO_PHOTOS);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
       setStatus('done');
     } catch (err: unknown) {
       console.error(err);
