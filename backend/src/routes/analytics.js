@@ -70,6 +70,7 @@ router.get('/dashboard', authenticate, authorize('ADMIN'), async (req, res) => {
       }),
       // Global Sanctioned Amount
       prisma.loan.aggregate({
+        where: { status: { in: ['ACTIVE', 'CLOSED', 'NPA', 'APPROVED'] } },
         _sum: { amount: true }
       }),
       // Global Total Recovered (Came Back)
