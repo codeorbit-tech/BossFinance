@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 
 interface LoanApplication {
   id: string;
+  loanNumber?: string | null;
   customer: {
     customerId: string;
     name: string;
@@ -728,7 +729,7 @@ export default function LoanApplicationsPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-black text-tertiary">{app.customer?.name || 'Unknown'}</p>
-                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{app.customer?.customerId || 'N/A'}</p>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{app.loanNumber || app.customer?.customerId || 'N/A'}</p>
                     </div>
                     <StatusBadge status={app.status} />
                   </div>
@@ -797,7 +798,8 @@ export default function LoanApplicationsPage() {
                   <tr key={app.id} className="hover:bg-surface/50 transition-colors">
                     <td className="px-6 py-5">
                       <p className="font-bold text-tertiary whitespace-nowrap">{app.customer?.name || 'Unknown'}</p>
-                      <p className="text-[10px] text-on-surface-variant">{app.customer?.customerId || 'N/A'}</p>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase">{app.loanNumber || '—'}</p>
+                      <p className="text-[10px] text-on-surface-variant/60">{app.customer?.customerId || 'N/A'}</p>
                     </td>
                     <td className="px-6 py-5 text-on-surface-variant capitalize">{app.loanType.toLowerCase()}</td>
                     <td className="px-6 py-5 text-right font-bold text-tertiary">₹{app.amount.toLocaleString()}</td>

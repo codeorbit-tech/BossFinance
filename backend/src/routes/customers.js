@@ -24,6 +24,14 @@ router.get('/', authenticate, async (req, res) => {
     }
     if (status) where.status = status;
 
+    // Filter by loan attributes via relation
+    if (loanType || frequency) {
+      const loanFilter = {};
+      if (loanType) loanFilter.loanType = loanType;
+      if (frequency) loanFilter.frequency = frequency;
+      where.loans = { some: loanFilter };
+    }
+
     const [customers, total] = await Promise.all([
       prisma.customer.findMany({
         where,

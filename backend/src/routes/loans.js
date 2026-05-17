@@ -160,10 +160,18 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Access denied.' });
     }
 
+    // Generate frequency-prefixed loan number: BF-YYYY-D01, BF-YYYY-W01, BF-YYYY-M01
+    const freq = (frequency || 'MONTHLY').toUpperCase();
+    const freqPrefix = freq === 'DAILY' ? 'D' : freq === 'WEEKLY' ? 'W' : 'M';
+    const year = new Date().getFullYear();
+    const countForFreq = await prisma.loan.count({ where: { frequency: freq } });
+    const loanNumber = `BF-${year}-${freqPrefix}${String(countForFreq + 1).padStart(2, '0')}`;
+
     const loan = await prisma.loan.create({
       data: {
         customerId,
         loanType,
+        loanNumber,
         amount: parseFloat(amount || 0),
         tenure: parseInt(tenure || 12),
         interestRate: parseFloat(interestRate || 0),

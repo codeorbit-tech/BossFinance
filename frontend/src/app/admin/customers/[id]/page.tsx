@@ -26,6 +26,7 @@ interface Repayment {
 
 interface Loan {
   id: string;
+  loanNumber?: string | null;
   loanType: string;
   amount: number;
   emi: number;
@@ -371,7 +372,13 @@ export default function CustomerDetailPage() {
           {activeLoan && (
             <div className="md:col-span-2 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 mt-2">
               <h3 className="text-sm font-bold text-tertiary uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2">Primary Loan Snapshot</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                 {activeLoan.loanNumber && (
+                   <div className="md:col-span-5 mb-2">
+                     <span className="text-xs text-on-surface-variant">Loan Number</span>
+                     <p className="font-black text-lg text-accent tracking-widest font-mono">{activeLoan.loanNumber}</p>
+                   </div>
+                 )}
                  <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Loan Type</span><span className="font-bold text-sm text-tertiary capitalize">{activeLoan.loanType.toLowerCase()}</span></div>
                  <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Frequency</span><span className="font-bold text-sm text-tertiary capitalize">{activeLoan.frequency.toLowerCase()}</span></div>
                  <div className="flex flex-col"><span className="text-xs text-on-surface-variant mb-0.5">Approved On</span><span className="font-bold text-sm text-tertiary">{activeLoan.approvedAt ? new Date(activeLoan.approvedAt).toLocaleDateString() : '—'}</span></div>
