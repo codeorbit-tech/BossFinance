@@ -60,7 +60,21 @@ router.post('/', async (req, res) => {
     ].includes(event);
 
     if (isSuccess) {
-      const subscriptionId = getSubscriptionId(data) || data.data?.order?.order_id || data.order_id;
+      let subscriptionId = getSubscriptionId(data) || data.data?.order?.order_id || data.order_id;
+      let isPaymentLink = false;
+      let paymentLinkLoanId = null;
+
+      // Extract link_id if available (for one-off payment links)
+      const linkId = data.data?.payment?.link_id || data.data?.link_id;
+      if (linkId && linkId.startsWith('link_loan_')) {
+        isPaymentLink = true;
+        // link_loan_LOANID_1234
+        const parts = linkId.split('_');
+        if (parts.length >= 3) {
+          paymentLinkLoanId = parts[2];
+        }
+      }
+
       const paymentId = data.data?.payment?.cf_payment_id || `cf_${Date.now()}`;
       const amount = toValidAmount(
         data.data?.payment?.payment_amount,
@@ -86,8 +100,14 @@ router.post('/', async (req, res) => {
         return res.status(200).send('OK');
       }
 
-      const loan = await prisma.loan.findUnique({ where: { razorpaySubscriptionId: subscriptionId } });
-      console.log('Loan found:', loan ? loan.id : 'NOT FOUND');
+      let loan = null;
+      if (isPaymentLink && paymentLinkLoanId) {
+        loan = await prisma.loan.findUnique({ where: { id: paymentLinkLoanId } });
+        console.log('Payment Link Loan found:', loan ? loan.id : 'NOT FOUND');
+      } else {
+        loan = await prisma.loan.findUnique({ where: { razorpaySubscriptionId: subscriptionId } });
+        console.log('Subscription Loan found:', loan ? loan.id : 'NOT FOUND');
+      }
 
       if (loan) {
         const installments = await prisma.installment.findMany({
@@ -144,15 +164,21 @@ router.post('/', async (req, res) => {
           })
         );
 
+        const loanUpdates = {
+          totalPaid: { increment: amount },
+          currentBalance: { decrement: amount },
+          nextDueDate: nextInstAfterAllocation ? nextInstAfterAllocation.dueDate : null,
+        };
+
+        // Only update subscription status if this was an actual subscription charge
+        if (!isPaymentLink) {
+          loanUpdates.subscriptionStatus = 'active';
+        }
+
         txOps.push(
           prisma.loan.update({
             where: { id: loan.id },
-            data: {
-              totalPaid: { increment: amount },
-              currentBalance: { decrement: amount },
-              subscriptionStatus: 'active',
-              nextDueDate: nextInstAfterAllocation ? nextInstAfterAllocation.dueDate : null,
-            },
+            data: loanUpdates,
           })
         );
 

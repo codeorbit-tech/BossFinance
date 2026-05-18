@@ -189,6 +189,15 @@ router.post('/', authenticate, async (req, res) => {
       },
     });
 
+    // If customer still has the generic format (e.g. BF-2026-001), update it to match the frequency loan ID
+    if (customer.customerId.match(/^BF-\d{4}-\d{3}$/)) {
+      const updatedCust = await prisma.customer.update({
+        where: { id: customerId },
+        data: { customerId: loanNumber },
+      });
+      loan.customer.customerId = updatedCust.customerId; // reflect in response
+    }
+
     res.status(201).json({ loan });
   } catch (err) {
     console.error('Create loan error:', err);

@@ -589,6 +589,15 @@ export default function RepaymentTracker() {
     }
   }, [activeSegment, page, search, detectAndAnimateChanges]);
 
+  const handleTriggerPaymentLinks = async () => {
+    try {
+      await repaymentsApi.triggerPaymentLinks();
+      toast.success("Triggered today's payment links!");
+    } catch (err) {
+      toast.error('Failed to trigger payment links');
+    }
+  };
+
   // ─ Fetch live stats ─
   const fetchStats = useCallback(async () => {
     try {
@@ -679,8 +688,17 @@ export default function RepaymentTracker() {
           </p>
         </div>
 
-        {/* Live indicator */}
+        {/* Live indicator & Actions */}
         <div className="flex items-center gap-3 flex-1 justify-end">
+          <button
+            onClick={handleTriggerPaymentLinks}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent text-white text-xs font-bold hover:bg-accent/90 transition-colors shadow-sm shadow-accent/20"
+            title="Manually trigger Cashfree payment links for all installments due today"
+          >
+            <span className="material-symbols-outlined text-[16px]">send_money</span>
+            Send Today's Links
+          </button>
+          
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all duration-300 ${pulsing ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-surface-container border-outline-variant/20 text-on-surface-variant'}`}>
             <span className={`w-2 h-2 rounded-full ${pulsing ? 'bg-accent animate-ping' : 'bg-accent'}`} />
             LIVE

@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate, authorize } = require('../middleware/auth');
 const { allocateRepayment } = require('../utils/repaymentAllocation');
+const { processDailyPaymentLinks } = require('../jobs/paymentLinkJob');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -711,6 +712,18 @@ router.get('/overdue-details', authenticate, async (req, res) => {
     res.json({ details: overdueDetails });
   } catch (err) {
     console.error('Overdue details error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/repayments/trigger-payment-links — Manually trigger payment links
+router.post('/trigger-payment-links', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    // Run asynchronously without blocking the response
+    processDailyPaymentLinks();
+    res.json({ message: 'Payment link generation process started for today.' });
+  } catch (err) {
+    console.error('Trigger payment links error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

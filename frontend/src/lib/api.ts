@@ -84,6 +84,7 @@ export const repaymentsApi = {
   getOverdueDetails: (params?: Record<string, string>) => api.get('/repayments/overdue-details', { params }),
   settlePenalties: (data: { loanId: string, amount: number, discount?: number, method: string, description?: string }) =>
     api.post('/repayments/settle-penalties', data),
+  triggerPaymentLinks: () => api.post('/repayments/trigger-payment-links'),
 };
 
 // ─── Notifications ───
@@ -147,4 +148,6 @@ export const usersApi = {
 export const cashfreeApi = {
   createSubscription: (loanId: string) =>
     api.post(`/cashfree/loans/${loanId}/create-subscription`),
+  sendPaymentLink: (loanId: string) =>
+    api.post(`/cashfree/loans/${loanId}/send-payment-link`),
 };

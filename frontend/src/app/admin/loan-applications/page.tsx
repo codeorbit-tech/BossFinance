@@ -89,15 +89,17 @@ function AutopayModal({
   const [copied, setCopied] = useState(false);
 
   const handleCreate = async () => {
+    toast.error('Autopay Subscriptions are currently disabled or not configured.');
+  };
+
+  const handleSendPaymentLink = async () => {
     setLoading(true);
     try {
-      const res = await cashfreeApi.createSubscription(loan.id);
-      const url = res.data.shortUrl;
-      setShortUrl(url);
-      onSuccess(url);
-      toast.success('Autopay subscription created!');
+      await cashfreeApi.sendPaymentLink(loan.id);
+      toast.success('Payment Link generated and sent to customer via SMS/Email!');
+      onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to create subscription');
+      toast.error(err.response?.data?.error || 'Failed to send payment link');
     } finally {
       setLoading(false);
     }
@@ -130,8 +132,8 @@ function AutopayModal({
                 </span>
               </div>
               <div>
-                <p className="font-bold text-white tracking-wide text-lg">Cashfree Autopay</p>
-                <p className="text-white/70 text-xs">Cashfree Subscription EMI</p>
+                <p className="font-bold text-white tracking-wide text-lg">Payment Action</p>
+                <p className="text-white/70 text-xs">Setup Autopay or Send Manual Payment Link</p>
               </div>
               <button
                 onClick={onClose}
@@ -159,22 +161,30 @@ function AutopayModal({
         </div>
 
         <div className="p-6 space-y-5">
-          {/* How it works */}
           <div className="bg-slate-50 rounded-xl p-4 space-y-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">How It Works</p>
-            {[
-              { icon: 'link', text: 'A unique mandate link is generated via Cashfree' },
-              { icon: 'share', text: 'Share the link via WhatsApp, Email, or SMS' },
-              { icon: 'verified_user', text: 'Customer authorizes mandate using UPI or Netbanking' },
-              { icon: 'autorenew', text: 'Cashfree auto-debits EMI every month — no manual action' },
-            ].map(({ icon, text }) => (
-              <div key={icon} className="flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-indigo-500 text-sm mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {icon}
-                </span>
-                <p className="text-xs text-slate-600">{text}</p>
-              </div>
-            ))}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Actions</p>
+            
+            <button
+              onClick={handleSendPaymentLink}
+              disabled={loading}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-60 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 mb-3"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <span className="material-symbols-outlined text-sm">send_money</span>
+              )}
+              Send Immediate Payment Link (UPI/Card)
+            </button>
+
+            <button
+              onClick={handleCreate}
+              className="w-full py-3 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">autorenew</span>
+              Create Autopay Subscription (Unavailable)
+            </button>
+            <p className="text-center text-[10px] text-slate-400">Autopay requires Cashfree subscription features.</p>
           </div>
 
           {/* Current status if already set up */}
@@ -217,24 +227,6 @@ function AutopayModal({
                 Open Mandate Page
               </a>
             </div>
-          ) : (
-            <button
-              onClick={isAlreadySetup ? handleCreate : handleCreate}
-              disabled={loading}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-60 shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating Subscription...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>autorenew</span>
-                  {isAlreadySetup ? 'Regenerate Autopay Link' : 'Create Autopay Subscription'}
-                </>
-              )}
-            </button>
           )}
 
           <div className="p-4 bg-slate-50 border-t flex justify-center items-center text-xs text-slate-400 font-medium">
@@ -978,7 +970,7 @@ export default function LoanApplicationsPage() {
                     { id: 'UPI', label: 'UPI', icon: 'qr_code_scanner' },
                     { id: 'CASH', label: 'Cash', icon: 'payments' },
                     { id: 'CHEQUE', label: 'Cheque', icon: 'request_quote' },
-                    { id: 'CASHFREE_AUTOPAY', label: 'Cashfree Autopay (Auto-setup)', icon: 'autorenew' },
+                    { id: 'CASHFREE_PAYMENT_LINK', label: 'Cashfree Payment Link (Auto-send on Due Date)', icon: 'link' },
                     { id: 'CASHFREE_PAYOUT', label: 'Cashfree Payout (Instant Transfer)', icon: 'send' },
                   ].map((method) => (
                     <label

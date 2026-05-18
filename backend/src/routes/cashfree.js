@@ -126,4 +126,87 @@ router.post('/loans/:loanId/create-subscription', authenticate, async (req, res)
   }
 });
 
+// POST /api/cashfree/loans/:loanId/send-payment-link
+router.post('/loans/:loanId/send-payment-link', authenticate, async (req, res) => {
+  try {
+    const { loanId } = req.params;
+
+    const loan = await prisma.loan.findUnique({
+      where: { id: loanId },
+      include: {
+        customer: true,
+        installments: {
+          where: { status: { not: 'PAID' } },
+          orderBy: { installmentNumber: 'asc' },
+        },
+      },
+    });
+
+    if (!loan) return res.status(404).json({ error: 'Loan not found.' });
+
+    if (loan.installments.length === 0) {
+      return res.status(400).json({ error: 'No unpaid installments found for this loan.' });
+    }
+
+    const firstUnpaid = loan.installments[0];
+    const amount = (firstUnpaid.totalRemaining || 0) + (firstUnpaid.penalInterest || 0) - (firstUnpaid.penaltyPaid || 0);
+
+    if (amount < 1) {
+      return res.status(400).json({ error: 'Outstanding amount is too low to generate a payment link.' });
+    }
+
+    const appId = process.env.CASHFREE_APP_ID;
+    const secretKey = process.env.CASHFREE_SECRET_KEY;
+    const envUrl = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
+      ? 'https://api.cashfree.com/pg' 
+      : 'https://sandbox.cashfree.com/pg';
+
+    const cfHeaders = {
+      'x-client-id': appId,
+      'x-client-secret': secretKey,
+      'x-api-version': '2023-08-01'
+    };
+
+    const linkId = `link_loan_${loan.id}_${Date.now().toString().slice(-4)}`;
+
+    const payload = {
+      customer_details: {
+        customer_phone: loan.customer.phone || '9999999999',
+        customer_name: loan.customer.name || 'Customer',
+        customer_email: loan.customer.email || 'test@cashfree.com',
+      },
+      link_id: linkId,
+      link_amount: Math.round(amount),
+      link_currency: 'INR',
+      link_purpose: `Loan EMI Payment - Installment #${firstUnpaid.installmentNumber}`,
+      link_notify: {
+        send_sms: true,
+        send_email: true,
+      },
+      link_meta: {
+        return_url: `${process.env.FRONTEND_URL}/repayments?link_id={link_id}`,
+      },
+    };
+
+    const response = await axios.post(`${envUrl}/links`, payload, { headers: cfHeaders });
+
+    await prisma.notification.create({
+      data: {
+        customerId: loan.customerId,
+        channel: 'SMS',
+        template: 'PAYMENT_LINK',
+        message: `Your EMI of ₹${amount} is due. Pay here: ${response.data.link_url}`,
+        status: 'SENT',
+        sentAt: new Date(),
+      },
+    });
+
+    return res.json({ success: true, link_url: response.data.link_url, amount });
+  } catch (err) {
+    console.error('Create payment link error:', err.response?.data || err.message);
+    const errorMessage = err.response?.data?.message || err.message || 'Failed to create payment link.';
+    return res.status(500).json({ error: errorMessage });
+  }
+});
+
 module.exports = router;

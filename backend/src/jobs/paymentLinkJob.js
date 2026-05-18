@@ -55,8 +55,25 @@ async function processDailyPaymentLinks() {
         continue;
       }
 
+      // Check if we already sent a payment link to this customer today
+      const alreadySent = await prisma.notification.findFirst({
+        where: {
+          customerId: inst.loan.customerId,
+          template: 'PAYMENT_LINK',
+          sentAt: {
+            gte: today,
+            lt: tomorrow
+          }
+        }
+      });
+
+      if (alreadySent) {
+        console.log(`[PaymentLinkJob] Skipping Inst #${inst.id} - Link already sent to customer today.`);
+        continue;
+      }
+
       try {
-        const linkId = `link_${inst.id.slice(0, 8)}_${Date.now().toString().slice(-4)}`;
+        const linkId = `link_loan_${inst.loan.id}_${Date.now().toString().slice(-4)}`;
         const amount = (inst.totalRemaining || 0) + (inst.penalInterest || 0) - (inst.penaltyPaid || 0);
 
         if (amount < 1) continue;
